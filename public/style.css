@@ -1,0 +1,102 @@
+body {
+  font-family: "Segoe UI", sans-serif;
+  background: url('https://files.catbox.moe/0vhe4q.jpg') no-repeat center center fixed;
+  background-size: cover;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.chat-container {
+  width: 400px;
+  height: 600px;
+  background: rgba(255, 255, 255, 0.85); /* slightly transparent so background image shows */
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+  overflow: hidden;
+  border: 1px solid #ddd;
+  backdrop-filter: blur(5px);
+}
+
+.chat-header {
+  position: relative;
+  text-align: center;
+  padding: 20px 10px 10px 10px;
+  font-weight: bold;
+  font-size: 2em;
+  color: #ff4d6d;
+  text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+  perspective: 500px; /* for 3D rotation */
+}
+
+#gowri {
+  display: inline-block;
+  animation: rotate3d 3s infinite alternate ease-in-out;
+}
+
+@keyframes rotate3d {
+  0% { transform: rotateX(0deg) rotateY(0deg); color: #ff4d6d; text-shadow: 2px 2px 8px rgba(0,0,0,0.5);}
+  50% { transform: rotateX(20deg) rotateY(20deg); color: #ff99b3; text-shadow: 4px 4px 10px rgba(0,0,0,0.5);}
+  100% { transform: rotateX(-20deg) rotateY(-20deg); color: #ff4d6d; text-shadow: 2px 2px 8px rgba(0,0,0,0.5);}
+}
+
+#messages {
+  list-style-type: none;
+  padding: 10px;
+  flex-grow: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+#messages li {
+  margin: 8px 0;
+  padding: 10px 15px;
+  border-radius: 18px;
+  max-width: 75%;
+  word-wrap: break-word;
+}
+
+#messages li.sent {
+  background: #dcf8c6;
+  align-self: flex-end;
+}
+
+#messages li.received {
+  background: #f1f0f0;
+  align-self: flex-start;
+}
+
+#form {
+  display: flex;
+  border-top: 1px solid #ccc;
+  background: #ffffffaa;
+  backdrop-filter: blur(5px);
+}
+
+#input {
+  flex: 1;
+  border: none;
+  padding: 10px;
+  outline: none;
+  border-radius: 0;
+}
+
+button {
+  background: #ff4d6d;
+  color: white;
+  border: none;
+  padding: 0 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 0;
+}
+
+button:hover {
+  background: #ff99b3;
+  transform: scale(1.05);
+}

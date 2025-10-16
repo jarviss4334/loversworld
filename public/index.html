@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GOWRI Chat</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="chat-container">
+    <!-- 3D Animated Header -->
+    <div class="chat-header">
+      <span id="gowri">GOWRI</span>
+    </div>
+
+    <!-- Messages List -->
+    <ul id="messages"></ul>
+
+    <!-- Input Form -->
+    <form id="form" action="">
+      <input id="input" autocomplete="off" placeholder="Type a message..." />
+      <button>Send</button>
+    </form>
+  </div>
+
+  <!-- Socket.io -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Chat Script -->
+  <script src="script.js"></script>
+</body>
+</html>
