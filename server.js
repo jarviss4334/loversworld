@@ -7,11 +7,14 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Serve static files from the public folder
 app.use(express.static(path.join(__dirname, "public")));
 
+// Handle Socket.io connections
 io.on("connection", (socket) => {
   console.log("A user connected");
 
+  // Broadcast chat messages to all clients
   socket.on("chat message", (msg) => {
     io.emit("chat message", msg);
   });
@@ -21,6 +24,8 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+// Use Render's dynamic port or fallback to 3000 for local testing
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
