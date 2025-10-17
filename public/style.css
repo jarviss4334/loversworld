@@ -1,6 +1,6 @@
 body {
   font-family: "Segoe UI", sans-serif;
-  background: url('https://files.catbox.moe/a43o8s.jpg') no-repeat center center fixed;
+  background: url('https://files.catbox.moe/rrid7f.jpg') no-repeat center center fixed;
   background-size: cover;
   margin: 0;
   height: 100vh;
@@ -14,7 +14,7 @@ body {
 .chat-container {
   width: 400px;
   height: 600px;
-  background: url('https://files.catbox.moe/zzvf7u.jpg') no-repeat center center;
+  background: url('https://files.catbox.moe/xkrwpz.jpg') no-repeat center center;
   background-size: cover;
   display: flex;
   flex-direction: column;
@@ -26,7 +26,7 @@ body {
   z-index: 1;
 }
 
-/* 3D rotating COUPLEWORLD text */
+/* Header & title */
 .chat-header {
   text-align: center;
   padding: 20px 10px 10px 10px;
@@ -37,8 +37,29 @@ body {
                0 0 30px rgba(255,192,203,0.5),
                0 0 40px rgba(255,105,180,0.4);
   perspective: 500px;
+  position: relative;
 }
 
+/* Move effect buttons ABOVE heading */
+.effect-switches {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  font-size: 0.9em;
+  margin-bottom: 8px;
+  position: absolute;
+  top: -35px;
+  left: 0;
+  width: 100%;
+}
+.effect-switches label {
+  color: #ff4d6d;
+  cursor: pointer;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(255,255,255,0.4);
+}
+
+/* Rotating COUPLEWORLD text */
 #coupleworld {
   display: inline-block;
   animation: rotate3d 5s infinite alternate ease-in-out;
@@ -79,20 +100,7 @@ body {
   50% { opacity: 1; }
 }
 
-/* Effect toggle switches */
-.effect-switches {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  font-size: 0.9em;
-  margin-top: 8px;
-}
-.effect-switches label {
-  color: #ff4d6d;
-  cursor: pointer;
-}
-
-/* Messages & form overlay */
+/* Chat messages */
 #messages {
   list-style-type: none;
   padding: 10px;
@@ -100,8 +108,6 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-
-  /* Semi-transparent overlay for readability */
   background: rgba(255, 255, 255, 0.25);
   border-radius: 0 0 20px 20px;
 }
@@ -120,6 +126,8 @@ body {
   background: #f1f0f0;
   align-self: flex-start;
 }
+
+/* Input area */
 #form {
   display: flex;
   border-top: 1px solid #ccc;
