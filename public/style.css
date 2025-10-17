@@ -1,89 +1,98 @@
 body {
   font-family: "Segoe UI", sans-serif;
-  background: url('https://files.catbox.moe/d3wlr7.jpg') no-repeat center center fixed;
+  background: url('https://files.catbox.moe/a43o8s.jpg') no-repeat center center fixed;
   background-size: cover;
+  margin: 0;
+  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  margin: 0;
   overflow: hidden;
 }
 
-/* Flower Animation Container */
-.flower {
-  position: fixed;
-  top: -50px;
-  font-size: 24px;
-  opacity: 0.9;
-  animation: fall 10s linear infinite;
-  z-index: 0;
-}
-
-@keyframes fall {
-  0% {
-    transform: translateY(0) rotateX(0deg) rotateY(0deg);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(110vh) rotateX(360deg) rotateY(360deg);
-    opacity: 0.7;
-  }
-}
-
-/* Chat container */
+/* Chat container with wallpaper */
 .chat-container {
   width: 400px;
   height: 600px;
-  background: rgba(255, 255, 255, 0.85);
+  background: url('https://files.catbox.moe/zzvf7u.jpg') no-repeat center center;
+  background-size: cover;
   display: flex;
   flex-direction: column;
   border-radius: 20px;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   border: 1px solid #ddd;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(6px);
   z-index: 1;
 }
 
-/* Header */
+/* 3D rotating COUPLEWORLD text */
 .chat-header {
-  position: relative;
   text-align: center;
   padding: 20px 10px 10px 10px;
   font-weight: bold;
   font-size: 2em;
-  color: #ff4d6d;
-  text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+  color: #fff;
+  text-shadow: 0 0 20px rgba(255,255,255,0.6),
+               0 0 30px rgba(255,192,203,0.5),
+               0 0 40px rgba(255,105,180,0.4);
   perspective: 500px;
 }
 
-/* COUPLEWORLD animation */
-#gowri {
+#coupleworld {
   display: inline-block;
-  animation: rotate3d 3s infinite alternate ease-in-out;
-  letter-spacing: 2px;
+  animation: rotate3d 5s infinite alternate ease-in-out;
 }
 
 @keyframes rotate3d {
-  0% {
-    transform: rotateX(0deg) rotateY(0deg);
-    color: #ff4d6d;
-    text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
-  }
-  50% {
-    transform: rotateX(20deg) rotateY(20deg);
-    color: #ff99b3;
-    text-shadow: 4px 4px 12px rgba(0,0,0,0.5);
-  }
-  100% {
-    transform: rotateX(-20deg) rotateY(-20deg);
-    color: #ff4d6d;
-    text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
-  }
+  0% { transform: perspective(500px) rotateY(0deg) rotateX(0deg); }
+  100% { transform: perspective(500px) rotateY(360deg) rotateX(360deg); }
 }
 
-/* Messages */
+/* Flowers (toggleable) */
+.flower {
+  position: fixed;
+  top: -50px;
+  font-size: 24px;
+  animation: fall linear forwards;
+  pointer-events: none;
+  z-index: 999;
+}
+@keyframes fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+}
+
+/* Lightning */
+.lightning {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255,255,255,0.8);
+  animation: flash 0.5s ease-in-out;
+  z-index: 9999;
+}
+@keyframes flash {
+  0%,100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* Effect toggle switches */
+.effect-switches {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.9em;
+  margin-top: 8px;
+}
+.effect-switches label {
+  color: #ff4d6d;
+  cursor: pointer;
+}
+
+/* Messages & form overlay */
 #messages {
   list-style-type: none;
   padding: 10px;
@@ -91,8 +100,11 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-}
 
+  /* Semi-transparent overlay for readability */
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 0 0 20px 20px;
+}
 #messages li {
   margin: 8px 0;
   padding: 10px 15px;
@@ -100,43 +112,34 @@ body {
   max-width: 75%;
   word-wrap: break-word;
 }
-
 #messages li.sent {
   background: #dcf8c6;
   align-self: flex-end;
 }
-
 #messages li.received {
   background: #f1f0f0;
   align-self: flex-start;
 }
-
-/* Input area */
 #form {
   display: flex;
   border-top: 1px solid #ccc;
   background: #ffffffaa;
   backdrop-filter: blur(5px);
 }
-
 #input {
   flex: 1;
   border: none;
   padding: 10px;
   outline: none;
-  border-radius: 0;
 }
-
 button {
   background: #ff4d6d;
   color: white;
   border: none;
   padding: 0 20px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  border-radius: 0;
+  transition: 0.3s;
 }
-
 button:hover {
   background: #ff99b3;
   transform: scale(1.05);
