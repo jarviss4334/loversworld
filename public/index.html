@@ -7,8 +7,9 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="header-area">
-    <div class="effect-switches top">
+  <!-- Heading & switches outside the chat container -->
+  <div class="header-container">
+    <div class="effect-switches">
       <label>
         <input type="checkbox" id="toggle-flowers" />
         🌸 Flowers
@@ -34,7 +35,7 @@
   <script src="script.js"></script>
 
   <script>
-    // --- Falling flowers effect (OFF by default) ---
+    // --- Falling flowers effect ---
     const flowersEnabled = document.getElementById("toggle-flowers");
     let flowerInterval;
     function createFlower() {
@@ -56,16 +57,26 @@
     }
     flowersEnabled.addEventListener("change", toggleFlowers);
 
-    // --- Lightning effect ---
+    // --- Dynamic Blue Lightning Effect ---
     const lightningEnabled = document.getElementById("toggle-lightning");
+
     function createLightning() {
       if (!lightningEnabled.checked) return;
+
       const lightning = document.createElement("div");
       lightning.classList.add("lightning");
+
+      const angle = Math.random() * 60 - 30; 
+      lightning.style.transform = `rotate(${angle}deg)`;
+
       document.body.appendChild(lightning);
-      setTimeout(() => lightning.remove(), 500);
+
+      setTimeout(() => lightning.remove(), 350);
     }
-    setInterval(createLightning, 8000);
+
+    setInterval(() => {
+      if (lightningEnabled.checked) createLightning();
+    }, 5000 + Math.random() * 3000);
   </script>
 </body>
 </html>
