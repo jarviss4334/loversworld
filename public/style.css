@@ -11,6 +11,34 @@ body {
   overflow: hidden;
 }
 
+/* Username prompt */
+.username-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 150px;
+}
+.username-prompt input {
+  padding: 10px;
+  font-size: 1em;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+.username-prompt button {
+  padding: 8px 15px;
+  background: #ff4d6d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+.username-prompt button:hover {
+  background: #ff99b3;
+  transform: scale(1.05);
+}
+
 /* Header & switches */
 .header-container {
   text-align: center;
