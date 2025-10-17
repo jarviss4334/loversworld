@@ -8,8 +8,14 @@
 </head>
 <body>
 
+  <!-- Username prompt -->
+  <div id="username-prompt" class="username-prompt">
+    <input id="username-input" placeholder="Enter your name..." />
+    <button id="username-submit">Join Chat</button>
+  </div>
+
   <!-- Header & Switches -->
-  <div class="header-container">
+  <div class="header-container" style="display:none">
     <div class="effect-switches">
       <label>
         <input type="checkbox" id="toggle-flowers" /> 🌸 Flowers
@@ -25,7 +31,7 @@
   </div>
 
   <!-- Chat Container -->
-  <div class="chat-container">
+  <div class="chat-container" style="display:none">
     <ul id="messages"></ul>
     <form id="form" action="">
       <input id="input" autocomplete="off" placeholder="Type a message..." />
@@ -41,8 +47,14 @@
   <script>
     document.addEventListener("DOMContentLoaded", () => {
 
-      // --- Socket.io chat setup ---
       const socket = io();
+
+      const usernamePrompt = document.getElementById("username-prompt");
+      const usernameInput = document.getElementById("username-input");
+      const usernameSubmit = document.getElementById("username-submit");
+
+      const headerContainer = document.querySelector(".header-container");
+      const chatContainer = document.querySelector(".chat-container");
       const form = document.getElementById("form");
       const input = document.getElementById("input");
       const messages = document.getElementById("messages");
@@ -51,13 +63,24 @@
       const lightningEnabled = document.getElementById("toggle-lightning");
       const glowEnabled = document.getElementById("toggle-glow");
 
+      let username = "";
       let flowerInterval;
 
-      // --- Add message with optional glow ---
-      function addMessage(msg, type) {
+      // --- Set username and show chat ---
+      usernameSubmit.addEventListener("click", () => {
+        const name = usernameInput.value.trim();
+        if (!name) return;
+        username = name;
+        usernamePrompt.style.display = "none";
+        headerContainer.style.display = "block";
+        chatContainer.style.display = "flex";
+      });
+
+      // --- Add message ---
+      function addMessage(msgObj, type) {
         const li = document.createElement("li");
-        li.textContent = msg;
         li.className = type;
+        li.innerHTML = `<strong>${msgObj.user}:</strong> ${msgObj.text}`;
 
         if (glowEnabled.checked) {
           li.classList.add("glow");
@@ -68,17 +91,19 @@
         li.scrollIntoView({ behavior: "smooth" });
       }
 
+      // --- Form submit ---
       form.addEventListener("submit", (e) => {
         e.preventDefault();
-        if (input.value) {
-          socket.emit("chat message", input.value);
-          addMessage(input.value, "sent");
-          input.value = "";
-        }
+        if (!input.value || !username) return;
+        const msgObj = { user: username, text: input.value };
+        socket.emit("chat message", msgObj);
+        addMessage(msgObj, "sent");
+        input.value = "";
       });
 
-      socket.on("chat message", (msg) => {
-        addMessage(msg, "received");
+      // --- Receive message ---
+      socket.on("chat message", (msgObj) => {
+        if (msgObj.user !== username) addMessage(msgObj, "received");
       });
 
       // --- Flowers effect ---
@@ -100,7 +125,7 @@
         }
       });
 
-      // --- Dynamic diagonal blue lightning ---
+      // --- Dynamic diagonal lightning ---
       const lightningContainer = document.getElementById("lightning-container");
       const flashOverlay = document.getElementById("flash-overlay");
 
