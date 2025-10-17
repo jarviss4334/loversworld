@@ -8,7 +8,7 @@
 </head>
 <body>
 
-  <!-- Header & switches -->
+  <!-- Header & Switches -->
   <div class="header-container">
     <div class="effect-switches">
       <label>
@@ -24,7 +24,7 @@
     <h1 id="coupleworld">COUPLEWORLD</h1>
   </div>
 
-  <!-- Chat container -->
+  <!-- Chat Container -->
   <div class="chat-container">
     <ul id="messages"></ul>
     <form id="form" action="">
@@ -33,109 +33,112 @@
     </form>
   </div>
 
-  <!-- Lightning and flash overlay -->
+  <!-- Lightning overlay -->
   <div id="lightning-container"></div>
   <div id="flash-overlay"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js"></script>
-
   <script>
-    // --- Chat setup ---
-    const socket = io();
-    const form = document.getElementById("form");
-    const input = document.getElementById("input");
-    const messages = document.getElementById("messages");
+    document.addEventListener("DOMContentLoaded", () => {
 
-    const glowEnabled = document.getElementById("toggle-glow");
+      // --- Socket.io chat setup ---
+      const socket = io();
+      const form = document.getElementById("form");
+      const input = document.getElementById("input");
+      const messages = document.getElementById("messages");
 
-    function addMessage(msg, type) {
-      const li = document.createElement("li");
-      li.textContent = msg;
-      li.className = type;
+      const flowersEnabled = document.getElementById("toggle-flowers");
+      const lightningEnabled = document.getElementById("toggle-lightning");
+      const glowEnabled = document.getElementById("toggle-glow");
 
-      if (glowEnabled.checked) {
-        li.classList.add("glow");
-        li.addEventListener("animationend", () => li.classList.remove("glow"));
+      let flowerInterval;
+
+      // --- Add message with optional glow ---
+      function addMessage(msg, type) {
+        const li = document.createElement("li");
+        li.textContent = msg;
+        li.className = type;
+
+        if (glowEnabled.checked) {
+          li.classList.add("glow");
+          li.addEventListener("animationend", () => li.classList.remove("glow"));
+        }
+
+        messages.appendChild(li);
+        li.scrollIntoView({ behavior: "smooth" });
       }
 
-      messages.appendChild(li);
-      li.scrollIntoView({ behavior: "smooth" });
-    }
-
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      if (input.value) {
-        socket.emit("chat message", input.value);
-        addMessage(input.value, "sent");
-        input.value = "";
-      }
-    });
-
-    socket.on("chat message", (msg) => {
-      addMessage(msg, "received");
-    });
-
-    // --- Flowers effect ---
-    const flowersEnabled = document.getElementById("toggle-flowers");
-    let flowerInterval;
-    function createFlower() {
-      const flower = document.createElement("div");
-      flower.classList.add("flower");
-      flower.innerText = "🌸";
-      flower.style.left = Math.random() * 100 + "vw";
-      flower.style.animationDuration = 3 + Math.random() * 3 + "s";
-      document.body.appendChild(flower);
-      setTimeout(() => flower.remove(), 6000);
-    }
-    function toggleFlowers() {
-      if (flowersEnabled.checked) flowerInterval = setInterval(createFlower, 500);
-      else {
-        clearInterval(flowerInterval);
-        document.querySelectorAll(".flower").forEach(f => f.remove());
-      }
-    }
-    flowersEnabled.addEventListener("change", toggleFlowers);
-
-    // --- Dynamic diagonal blue lightning ---
-    const lightningEnabled = document.getElementById("toggle-lightning");
-    const lightningContainer = document.getElementById("lightning-container");
-    const flashOverlay = document.getElementById("flash-overlay");
-
-    function strikeLightning() {
-      if (!lightningEnabled.checked) return;
-
-      const segments = [];
-      let x = 0, y = 0;
-
-      for (let i = 0; i < 15; i++) {
-        const seg = document.createElement("div");
-        seg.classList.add("lightning-segment");
-
-        const angle = Math.random() * 40 - 20;
-        seg.style.transform = `rotate(${angle}deg)`;
-        seg.style.left = x + "px";
-        seg.style.top = y + "px";
-
-        lightningContainer.appendChild(seg);
-        segments.push(seg);
-
-        x += 20 + Math.random() * 10;
-        y += 30 + Math.random() * 10;
-      }
-
-      segments.forEach((seg, index) => {
-        setTimeout(() => {
-          seg.style.opacity = 1;
-          setTimeout(() => seg.remove(), 150);
-        }, index * 50);
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (input.value) {
+          socket.emit("chat message", input.value);
+          addMessage(input.value, "sent");
+          input.value = "";
+        }
       });
 
-      flashOverlay.style.opacity = 0.5;
-      setTimeout(() => flashOverlay.style.opacity = 0, 150);
-    }
+      socket.on("chat message", (msg) => {
+        addMessage(msg, "received");
+      });
 
-    setInterval(strikeLightning, 5000 + Math.random() * 3000);
+      // --- Flowers effect ---
+      function createFlower() {
+        const flower = document.createElement("div");
+        flower.classList.add("flower");
+        flower.innerText = "🌸";
+        flower.style.left = Math.random() * 100 + "vw";
+        flower.style.animationDuration = 3 + Math.random() * 3 + "s";
+        document.body.appendChild(flower);
+        setTimeout(() => flower.remove(), 6000);
+      }
+
+      flowersEnabled.addEventListener("change", () => {
+        if (flowersEnabled.checked) flowerInterval = setInterval(createFlower, 500);
+        else {
+          clearInterval(flowerInterval);
+          document.querySelectorAll(".flower").forEach(f => f.remove());
+        }
+      });
+
+      // --- Dynamic diagonal blue lightning ---
+      const lightningContainer = document.getElementById("lightning-container");
+      const flashOverlay = document.getElementById("flash-overlay");
+
+      function strikeLightning() {
+        if (!lightningEnabled.checked) return;
+
+        const segments = [];
+        let x = 0, y = 0;
+
+        for (let i = 0; i < 15; i++) {
+          const seg = document.createElement("div");
+          seg.classList.add("lightning-segment");
+          const angle = Math.random() * 40 - 20;
+          seg.style.transform = `rotate(${angle}deg)`;
+          seg.style.left = x + "px";
+          seg.style.top = y + "px";
+
+          lightningContainer.appendChild(seg);
+          segments.push(seg);
+
+          x += 20 + Math.random() * 10;
+          y += 30 + Math.random() * 10;
+        }
+
+        segments.forEach((seg, index) => {
+          setTimeout(() => {
+            seg.style.opacity = 1;
+            setTimeout(() => seg.remove(), 150);
+          }, index * 50);
+        });
+
+        flashOverlay.style.opacity = 0.5;
+        setTimeout(() => flashOverlay.style.opacity = 0, 150);
+      }
+
+      setInterval(strikeLightning, 5000 + Math.random() * 3000);
+
+    });
   </script>
 </body>
 </html>
