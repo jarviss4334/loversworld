@@ -2,18 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>COUPLEWORLD Chat</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="chat-container">
     <div class="chat-header">
-      <span id="gowri">COUPLEWORLD</span>
-      <label class="switch">
-        <input type="checkbox" id="effectToggle" checked />
-        <span class="slider"></span>
-      </label>
+      <h1 id="coupleworld">COUPLEWORLD</h1>
+      <div class="effect-switches">
+        <label>
+          <input type="checkbox" id="toggle-flowers" />
+          🌸 Flowers
+        </label>
+        <label>
+          <input type="checkbox" id="toggle-lightning" />
+          ⚡ Lightning
+        </label>
+      </div>
     </div>
 
     <ul id="messages"></ul>
@@ -24,39 +30,42 @@
     </form>
   </div>
 
-  <div id="lightning"></div>
-
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
 
   <script>
-    // 🌸 Create flower elements
-    const flowers = ['🌸','🌺','🌷','🌹','💮','🌼'];
-    const flowerElems = [];
-    for (let i = 0; i < 20; i++) {
-      const f = document.createElement('div');
-      f.className = 'flower';
-      f.textContent = flowers[Math.floor(Math.random() * flowers.length)];
-      f.style.left = Math.random() * 100 + 'vw';
-      f.style.animationDuration = 5 + Math.random() * 5 + 's';
-      f.style.fontSize = 18 + Math.random() * 20 + 'px';
-      document.body.appendChild(f);
-      flowerElems.push(f);
+    // --- Falling flowers effect (OFF by default) ---
+    const flowersEnabled = document.getElementById("toggle-flowers");
+    let flowerInterval;
+    function createFlower() {
+      const flower = document.createElement("div");
+      flower.classList.add("flower");
+      flower.innerText = "🌸";
+      flower.style.left = Math.random() * 100 + "vw";
+      flower.style.animationDuration = 3 + Math.random() * 3 + "s";
+      document.body.appendChild(flower);
+      setTimeout(() => flower.remove(), 6000);
     }
+    function toggleFlowers() {
+      if (flowersEnabled.checked) {
+        flowerInterval = setInterval(createFlower, 500);
+      } else {
+        clearInterval(flowerInterval);
+        document.querySelectorAll(".flower").forEach(f => f.remove());
+      }
+    }
+    flowersEnabled.addEventListener("change", toggleFlowers);
 
-    // 🌸 Toggle flower animation
-    const toggle = document.getElementById('effectToggle');
-    toggle.addEventListener('change', () => {
-      flowerElems.forEach(f => f.style.display = toggle.checked ? 'block' : 'none');
-    });
-
-    // ⚡ Lightning effect
-    const lightning = document.getElementById('lightning');
-    setInterval(() => {
-      if (!toggle.checked) return;
-      lightning.classList.add('flash');
-      setTimeout(() => lightning.classList.remove('flash'), 400);
-    }, 8000 + Math.random() * 8000);
+    // --- Lightning effect ---
+    const lightningEnabled = document.getElementById("toggle-lightning");
+    function createLightning() {
+      if (!lightningEnabled.checked) return;
+      const lightning = document.createElement("div");
+      lightning.classList.add("lightning");
+      document.body.appendChild(lightning);
+      setTimeout(() => lightning.remove(), 500);
+    }
+    setInterval(createLightning, 8000);
   </script>
 </body>
 </html>
