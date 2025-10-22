@@ -1,14 +1,12 @@
 {
-  "name": "website",
+  "name": "coupleworld-chat",
   "version": "1.0.0",
-  "description": "",
+  "description": "Two-person chat app with voice messages and visual effects",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
+  "author": "Thejus",
   "license": "ISC",
   "dependencies": {
     "express": "^5.1.0",
