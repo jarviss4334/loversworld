@@ -19,6 +19,11 @@ io.on("connection", (socket) => {
     io.emit("chat message", msg);
   });
 
+  // Broadcast voice messages to all clients
+  socket.on("voice message", (msg) => {
+    io.emit("voice message", msg);
+  });
+
   socket.on("disconnect", () => {
     console.log("User disconnected");
   });
