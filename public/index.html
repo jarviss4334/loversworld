@@ -14,7 +14,7 @@
     <button id="username-submit">Join Chat</button>
   </div>
 
-  <!-- Header & Switches -->
+  <!-- Switches above chat container -->
   <div class="header-container" style="display:none">
     <div class="effect-switches">
       <label>
@@ -24,10 +24,9 @@
         <input type="checkbox" id="toggle-lightning" /> ⚡ Lightning
       </label>
       <label>
-        <input type="checkbox" id="toggle-glow" /> 💫 Chat Glow
+        <input type="checkbox" id="toggle-glow" checked /> 💫 Chat Glow
       </label>
     </div>
-    <h1 id="coupleworld">COUPLEWORLD</h1>
   </div>
 
   <!-- Chat Container -->
@@ -36,6 +35,7 @@
     <form id="form" action="">
       <input id="input" autocomplete="off" placeholder="Type a message..." />
       <button>Send</button>
+      <button type="button" id="record-btn" aria-pressed="false">🎤</button>
     </form>
   </div>
 
@@ -44,125 +44,19 @@
   <div id="flash-overlay"></div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
+    // Call joinChat from script.js after entering username
+    const usernameSubmit = document.getElementById("username-submit");
+    usernameSubmit.addEventListener("click", () => {
+      const name = document.getElementById("username-input").value.trim();
+      if (!name) return alert("Please enter your name");
+      window.joinChat(name);
 
-      const socket = io();
-
-      const usernamePrompt = document.getElementById("username-prompt");
-      const usernameInput = document.getElementById("username-input");
-      const usernameSubmit = document.getElementById("username-submit");
-
-      const headerContainer = document.querySelector(".header-container");
-      const chatContainer = document.querySelector(".chat-container");
-      const form = document.getElementById("form");
-      const input = document.getElementById("input");
-      const messages = document.getElementById("messages");
-
-      const flowersEnabled = document.getElementById("toggle-flowers");
-      const lightningEnabled = document.getElementById("toggle-lightning");
-      const glowEnabled = document.getElementById("toggle-glow");
-
-      let username = "";
-      let flowerInterval;
-
-      // --- Set username and show chat ---
-      usernameSubmit.addEventListener("click", () => {
-        const name = usernameInput.value.trim();
-        if (!name) return;
-        username = name;
-        usernamePrompt.style.display = "none";
-        headerContainer.style.display = "block";
-        chatContainer.style.display = "flex";
-      });
-
-      // --- Add message ---
-      function addMessage(msgObj, type) {
-        const li = document.createElement("li");
-        li.className = type;
-        li.innerHTML = `<strong>${msgObj.user}:</strong> ${msgObj.text}`;
-
-        if (glowEnabled.checked) {
-          li.classList.add("glow");
-          li.addEventListener("animationend", () => li.classList.remove("glow"));
-        }
-
-        messages.appendChild(li);
-        li.scrollIntoView({ behavior: "smooth" });
-      }
-
-      // --- Form submit ---
-      form.addEventListener("submit", (e) => {
-        e.preventDefault();
-        if (!input.value || !username) return;
-        const msgObj = { user: username, text: input.value };
-        socket.emit("chat message", msgObj);
-        addMessage(msgObj, "sent");
-        input.value = "";
-      });
-
-      // --- Receive message ---
-      socket.on("chat message", (msgObj) => {
-        if (msgObj.user !== username) addMessage(msgObj, "received");
-      });
-
-      // --- Flowers effect ---
-      function createFlower() {
-        const flower = document.createElement("div");
-        flower.classList.add("flower");
-        flower.innerText = "🌸";
-        flower.style.left = Math.random() * 100 + "vw";
-        flower.style.animationDuration = 3 + Math.random() * 3 + "s";
-        document.body.appendChild(flower);
-        setTimeout(() => flower.remove(), 6000);
-      }
-
-      flowersEnabled.addEventListener("change", () => {
-        if (flowersEnabled.checked) flowerInterval = setInterval(createFlower, 500);
-        else {
-          clearInterval(flowerInterval);
-          document.querySelectorAll(".flower").forEach(f => f.remove());
-        }
-      });
-
-      // --- Dynamic diagonal lightning ---
-      const lightningContainer = document.getElementById("lightning-container");
-      const flashOverlay = document.getElementById("flash-overlay");
-
-      function strikeLightning() {
-        if (!lightningEnabled.checked) return;
-
-        const segments = [];
-        let x = 0, y = 0;
-
-        for (let i = 0; i < 15; i++) {
-          const seg = document.createElement("div");
-          seg.classList.add("lightning-segment");
-          const angle = Math.random() * 40 - 20;
-          seg.style.transform = `rotate(${angle}deg)`;
-          seg.style.left = x + "px";
-          seg.style.top = y + "px";
-
-          lightningContainer.appendChild(seg);
-          segments.push(seg);
-
-          x += 20 + Math.random() * 10;
-          y += 30 + Math.random() * 10;
-        }
-
-        segments.forEach((seg, index) => {
-          setTimeout(() => {
-            seg.style.opacity = 1;
-            setTimeout(() => seg.remove(), 150);
-          }, index * 50);
-        });
-
-        flashOverlay.style.opacity = 0.5;
-        setTimeout(() => flashOverlay.style.opacity = 0, 150);
-      }
-
-      setInterval(strikeLightning, 5000 + Math.random() * 3000);
-
+      // Show switches and chat container
+      document.querySelector(".header-container").style.display = "block";
+      document.querySelector(".chat-container").style.display = "flex";
+      document.getElementById("username-prompt").style.display = "none";
     });
   </script>
 </body>
