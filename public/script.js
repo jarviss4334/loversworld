@@ -1,11 +1,11 @@
-// public/script.js
 const socket = io();
 
-let username = "";            // Set when user joins
+let username = "";            
 const form = document.getElementById("form");
 const input = document.getElementById("input");
 const messages = document.getElementById("messages");
 const recordBtn = document.getElementById("record-btn");
+const typingIndicator = document.getElementById("typing-indicator");
 
 let flowerInterval = null;
 let lightningInterval = null;
@@ -13,9 +13,16 @@ let mediaStream = null;
 let mediaRecorder = null;
 let audioChunks = [];
 
-// --- Join chat function, called from index.html ---
+let usersTyping = new Set();
+let recordingUsers = new Set();
+let activeUsers = new Set();
+let typingTimeout;
+let isTyping = false;
+
+// --- Join chat function ---
 window.joinChat = function(name) {
   username = name;
+  socket.emit("new user", username);
 };
 
 // --- Append message ---
@@ -42,6 +49,7 @@ form.addEventListener("submit", (e) => {
   socket.emit("chat message", msg);
   appendMessage(msg, "sent");
   input.value = "";
+  socket.emit("stop typing", username);
 });
 
 // --- Receive text messages ---
@@ -56,14 +64,15 @@ async function ensureMediaStream() {
     mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     return mediaStream;
   } catch (err) {
-    console.error("Microphone access denied:", err);
-    alert("Microphone access denied. Please allow microphone permission.");
+    alert("Microphone access denied.");
     throw err;
   }
 }
 
 async function startRecording() {
   if (!username) { alert("Enter your name first."); return; }
+  socket.emit("start recording", username);
+
   try {
     const stream = await ensureMediaStream();
     audioChunks = [];
@@ -86,12 +95,14 @@ async function startRecording() {
 }
 
 function stopRecording() {
+  if (!username) return;
+  socket.emit("stop recording", username);
   if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
   recordBtn.textContent = "🎤";
   recordBtn.setAttribute("aria-pressed", "false");
 }
 
-// Attach mouse & touch events
+// Mouse & touch events
 recordBtn.addEventListener("mousedown", e => { e.preventDefault(); startRecording(); });
 recordBtn.addEventListener("mouseup",   e => { e.preventDefault(); stopRecording(); });
 recordBtn.addEventListener("touchstart", e => { e.preventDefault(); startRecording(); }, { passive: false });
@@ -125,7 +136,7 @@ socket.on("voice message", (msg) => {
   messages.scrollTop = messages.scrollHeight;
 });
 
-// --- Flower effect ---
+// --- Flowers effect ---
 function createFlower() {
   const flower = document.createElement("div");
   flower.classList.add("flower");
@@ -135,13 +146,9 @@ function createFlower() {
   document.body.appendChild(flower);
   setTimeout(() => flower.remove(), 6000);
 }
-
 document.getElementById("toggle-flowers").addEventListener("change", (e) => {
   if (e.target.checked) flowerInterval = setInterval(createFlower, 500);
-  else {
-    clearInterval(flowerInterval);
-    document.querySelectorAll(".flower").forEach(f => f.remove());
-  }
+  else { clearInterval(flowerInterval); document.querySelectorAll(".flower").forEach(f => f.remove()); }
 });
 
 // --- Lightning effect ---
@@ -150,7 +157,6 @@ const flashOverlay = document.getElementById("flash-overlay");
 
 function strikeLightning() {
   if (!document.getElementById("toggle-lightning").checked) return;
-
   const segments = [];
   let x = 0, y = 0;
 
@@ -168,14 +174,84 @@ function strikeLightning() {
   }
 
   segments.forEach((seg, index) => {
-    setTimeout(() => {
-      seg.style.opacity = 1;
-      setTimeout(() => seg.remove(), 150);
-    }, index * 50);
+    setTimeout(() => { seg.style.opacity = 1; setTimeout(() => seg.remove(), 150); }, index*50);
   });
 
   flashOverlay.style.opacity = 0.5;
   setTimeout(() => flashOverlay.style.opacity = 0, 150);
 }
-
 setInterval(strikeLightning, 5000 + Math.random() * 3000);
+
+// --- Active Users ---
+function updateUsersList() {
+  const usersList = document.getElementById("users-list");
+  usersList.innerHTML = "";
+  activeUsers.forEach(u => {
+    const li = document.createElement("li");
+    li.textContent = u;
+    if(u === username) li.style.fontWeight = "bold";
+    usersList.appendChild(li);
+  });
+}
+socket.on("update users", (usersArray) => { activeUsers = new Set(usersArray); updateUsersList(); });
+
+// --- Typing indicator ---
+input.addEventListener("input", () => {
+  if (!isTyping) { socket.emit("typing", username); isTyping = true; }
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => { socket.emit("stop typing", username); isTyping = false; }, 1000);
+});
+socket.on("typing", (user) => { if(user !== username) { usersTyping.add(user); updateIndicator(); } });
+socket.on("stop typing", (user) => { usersTyping.delete(user); updateIndicator(); });
+socket.on("start recording", (user) => { if(user !== username) { recordingUsers.add(user); updateIndicator(); } });
+socket.on("stop recording", (user) => { recordingUsers.delete(user); updateIndicator(); });
+function updateIndicator() {
+  if (recordingUsers.size > 0) typingIndicator.textContent = Array.from(recordingUsers).join(", ") + " is recording audio...";
+  else if (usersTyping.size > 0) typingIndicator.textContent = Array.from(usersTyping).join(", ") + " is typing...";
+  else typingIndicator.textContent = "";
+}
+
+// --- Smooth slideshow for page & chat container ---
+const bgImages = [
+  "https://files.catbox.moe/jzvuld.jpg",
+  "https://files.catbox.moe/huovh5.jpg",
+  "https://files.catbox.moe/a0qix1.jpg",
+  "https://files.catbox.moe/mgt1w8.jpg",
+  "https://files.catbox.moe/gvz7za.jpg",
+  "https://files.catbox.moe/h545yn.jpg",
+  "https://files.catbox.moe/c5bv8w.jpg",
+  "https://files.catbox.moe/iypooq.jpg",
+  "https://files.catbox.moe/ylpobz.jpg",
+  "https://files.catbox.moe/4u6cnb.jpg"
+];
+let bgIndex = 0;
+const pageBg = document.createElement("div");
+pageBg.id = "page-bg";
+document.body.prepend(pageBg);
+const chatContainer = document.querySelector(".chat-container");
+
+function changeBackgrounds() {
+  const nextImage = bgImages[bgIndex];
+  bgIndex = (bgIndex + 1) % bgImages.length;
+
+  // Page background fade
+  pageBg.style.opacity = 0;
+  setTimeout(() => { pageBg.style.backgroundImage = `url('${nextImage}')`; pageBg.style.opacity = 1; }, 200);
+
+  // Chat container background fade
+  chatContainer.style.setProperty('--chat-bg-next', `url('${nextImage}')`);
+  chatContainer.style.opacity = 0;
+  setTimeout(() => { chatContainer.style.backgroundImage = `url('${nextImage}')`; chatContainer.style.opacity = 1; }, 200);
+}
+
+changeBackgrounds();
+setInterval(changeBackgrounds, 20000);
+
+// --- 3-dot menu toggle ---
+const menuBtn = document.getElementById("menu-btn");
+const effectSwitches = document.getElementById("effect-switches");
+
+menuBtn.addEventListener("click", () => {
+  effectSwitches.classList.toggle("show");
+});
+
