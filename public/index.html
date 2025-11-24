@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>COUPLEWORLD Chat</title>
+  <title>Chat App</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -14,29 +14,46 @@
     <button id="username-submit">Join Chat</button>
   </div>
 
-  <!-- Switches above chat container -->
+  <!-- Header container (3-dot menu + switches) -->
   <div class="header-container" style="display:none">
-    <div class="effect-switches">
-      <label>
-        <input type="checkbox" id="toggle-flowers" /> 🌸 Flowers
-      </label>
-      <label>
-        <input type="checkbox" id="toggle-lightning" /> ⚡ Lightning
-      </label>
-      <label>
-        <input type="checkbox" id="toggle-glow" checked /> 💫 Chat Glow
-      </label>
+    <div class="menu-container">
+      <button id="menu-btn">⋮</button>
+      <div class="effect-switches" id="effect-switches">
+        <label>
+          <input type="checkbox" id="toggle-flowers" /> 🌸 Flowers
+        </label>
+        <label>
+          <input type="checkbox" id="toggle-lightning" /> ⚡ Lightning
+        </label>
+        <label>
+          <input type="checkbox" id="toggle-glow" checked /> 💫 Chat Glow
+        </label>
+      </div>
     </div>
   </div>
 
   <!-- Chat Container -->
   <div class="chat-container" style="display:none">
-    <ul id="messages"></ul>
-    <form id="form" action="">
-      <input id="input" autocomplete="off" placeholder="Type a message..." />
-      <button>Send</button>
-      <button type="button" id="record-btn" aria-pressed="false">🎤</button>
-    </form>
+
+    <!-- Active Users List -->
+    <div id="active-users" class="active-users">
+      <h4>Online Users</h4>
+      <ul id="users-list"></ul>
+    </div>
+
+    <!-- Chat main area -->
+    <div class="chat-main">
+      <ul id="messages"></ul>
+      <!-- Typing Indicator -->
+      <div id="typing-indicator" class="typing-indicator"></div>
+
+      <form id="form" action="">
+        <input id="input" autocomplete="off" placeholder="Type a message..." />
+        <button>Send</button>
+        <button type="button" id="record-btn" aria-pressed="false">🎤</button>
+      </form>
+    </div>
+
   </div>
 
   <!-- Lightning overlay -->
@@ -46,14 +63,13 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
   <script>
-    // Call joinChat from script.js after entering username
+    // Join chat after entering username
     const usernameSubmit = document.getElementById("username-submit");
     usernameSubmit.addEventListener("click", () => {
       const name = document.getElementById("username-input").value.trim();
       if (!name) return alert("Please enter your name");
       window.joinChat(name);
 
-      // Show switches and chat container
       document.querySelector(".header-container").style.display = "block";
       document.querySelector(".chat-container").style.display = "flex";
       document.getElementById("username-prompt").style.display = "none";
