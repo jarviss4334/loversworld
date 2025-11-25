@@ -120,7 +120,7 @@ body {
   background-image: var(--bg-next);
 }
 
-/* Active users */
+/* Active Users Container */
 .active-users {
   background: rgba(255,255,255,0.25);
   backdrop-filter: blur(6px);
@@ -129,8 +129,17 @@ body {
   max-height: 200px;
   overflow-y: auto;
   font-weight: 600;
-  color: #fff;
+  color: #fff; /* container text fallback */
 }
+
+/* Active Users Names - Pink with Glow */
+.active-users li {
+  color: #ff66b2; /* pink */
+  text-shadow: 0 0 6px #ff66b2, 0 0 12px #ff99cc; /* pink glow effect */
+  margin: 4px 0;
+  font-weight: 600;
+}
+
 
 /* Chat main */
 .chat-main {
