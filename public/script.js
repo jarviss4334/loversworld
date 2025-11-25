@@ -46,29 +46,68 @@ function appendMessage(msgObj, type) {
 form.addEventListener("submit", (e) => {
   e.preventDefault();
   if (!input.value || !username) return;
+
   const msg = { user: username, text: input.value };
   socket.emit("chat message", msg);
+
   appendMessage(msg, "sent");
+
+  const lastMsg = document.querySelector("#messages li:last-child");
+  if (lastMsg) {
+    const glowToggle = document.getElementById("toggle-glow");
+    const heartToggle = document.getElementById("toggle-heart"); // rename toggle if needed
+
+    // Glow effect
+    if (glowToggle && glowToggle.checked) {
+      lastMsg.classList.add("glow");
+      lastMsg.addEventListener("animationend", () => {
+        lastMsg.classList.remove("glow");
+      }, { once: true });
+    }
+
+    // Heart ripple effect
+    if (heartToggle && heartToggle.checked) {
+      const heart = document.createElement("div");
+      heart.classList.add("heart-ripple");
+      lastMsg.appendChild(heart);
+      setTimeout(() => heart.remove(), 700);
+    }
+  }
+
   input.value = "";
   socket.emit("stop typing", username);
 });
 
 // Receive text
 socket.on("chat message", (msg) => {
-  if (msg.user !== username) appendMessage(msg, "received");
+  if (msg.user !== username) {
+    appendMessage(msg, "received");
+
+    const lastMsg = document.querySelector("#messages li:last-child");
+    if (lastMsg) {
+      const glowToggle = document.getElementById("toggle-glow");
+      const heartToggle = document.getElementById("toggle-heart");
+
+      // Glow effect
+      if (glowToggle && glowToggle.checked) {
+        lastMsg.classList.add("glow");
+        lastMsg.addEventListener("animationend", () => {
+          lastMsg.classList.remove("glow");
+        }, { once: true });
+      }
+
+      // Heart ripple effect
+      if (heartToggle && heartToggle.checked) {
+        const heart = document.createElement("div");
+        heart.classList.add("heart-ripple");
+        lastMsg.appendChild(heart);
+        setTimeout(() => heart.remove(), 700);
+      }
+    }
+  }
 });
 
-// Voice recording
-async function ensureMediaStream() {
-  if (mediaStream) return mediaStream;
-  try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    return mediaStream;
-  } catch {
-    alert("Microphone access denied.");
-    throw err;
-  }
-}
+
 
 async function startRecording() {
   if (!username) return alert("Enter your name first.");
