@@ -149,12 +149,13 @@ body {
   overflow: hidden;
 }
 
-/* Messages */
 #messages {
   list-style: none;
   padding: 10px;
   flex-grow: 1;
   overflow-y: auto;
+  overflow-x: visible;   /* ADD */
+  overflow: visible;     /* ADD */
   display: flex;
   flex-direction: column;
 }
@@ -164,28 +165,23 @@ body {
   border-radius: 18px;
   max-width: 75%;
   word-wrap: break-word;
+  position: relative;
 }
 #messages li.sent { background: #dcf8c6; align-self: flex-end; }
 #messages li.received { background: #f1f0f0; align-self: flex-start; }
 
 /* Glow pulse */
 .sent.glow {
-  animation: pulse-blue 1s ease-out;
+  animation: pulse-pink 1.2s ease-out;
 }
 .received.glow {
-  animation: pulse-red 1s ease-out;
+  animation: pulse-pink 1.2s ease-out;
 }
-@keyframes pulse-blue {
-  0% { box-shadow: 0 0 0px rgba(0,0,255,0.7); }
-  50% { box-shadow: 0 0 20px rgba(0,0,255,0.7); }
-  100% { box-shadow: 0 0 0px rgba(0,0,255,0); }
+@keyframes pulse-pink {
+  0% { box-shadow: 0 0 2px rgba(255,102,178,0.8); }
+  50% { box-shadow: 0 0 30px rgba(255,102,178,0.9); }
+  100% { box-shadow: 0 0 2px rgba(255,102,178,0); }
 }
-@keyframes pulse-red {
-  0% { box-shadow: 0 0 0px rgba(255,0,0,0.7); }
-  50% { box-shadow: 0 0 20px rgba(255,0,0,0.7); }
-  100% { box-shadow: 0 0 0px rgba(255,0,0,0); }
-}
-
 /* Input area */
 #form {
   display: flex;
@@ -226,15 +222,44 @@ body {
   100% { transform: translateY(100vh); opacity:0; }
 }
 
-/* Flash overlay */
-#flash-overlay {
-  position: fixed;
-  top:0; left:0;
-  width:100vw; height:100vh;
-  background: rgba(0,0,255,0.3);
-  opacity:0;
-  pointer-events:none;
-  z-index: 9999;
+/* Heart Ripple */
+.heart-ripple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  transform: translate(-50%, -50%) rotate(-45deg) scale(0);
+  animation: heart-pop 0.7s forwards;
+}
+
+.heart-ripple::before,
+.heart-ripple::after {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: pink;
+  border-radius: 50%;
+}
+
+.heart-ripple::before { top: -10px; left: 0; }
+.heart-ripple::after { top: 0; left: 10px; }
+
+
+@keyframes heart-pop {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
 }
 
 /* Responsive */
