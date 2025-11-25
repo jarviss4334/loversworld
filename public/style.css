@@ -253,6 +253,36 @@ body {
   50% { transform: rotate(15deg); }
   100% { transform: rotate(-15deg); }
 }
+/* Drag / Finger Trail Particles */
+.trail-particle {
+  position: fixed;
+  width: 8px;  /* starting size */
+  height: 8px;
+  border-radius: 50%;
+  background: pink;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.8;
+  transform: translate(-50%, -50%) scale(1);
+  box-shadow: 0 0 6px #ff99cc, 0 0 12px #ff66b2; /* glowing pink */
+  animation: trail-fade 1s forwards;
+}
+
+@keyframes trail-fade {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+}
+
 
 /* Heart Ripple */
 .heart-ripple {
