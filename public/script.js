@@ -1,5 +1,7 @@
 const socket = io();
+
 let username = "";
+
 const form = document.getElementById("form");
 const input = document.getElementById("input");
 const messages = document.getElementById("messages");
@@ -224,3 +226,4 @@ document.addEventListener("click", (e) => {
     effectSwitches.classList.remove("show");
   }
 });
+
