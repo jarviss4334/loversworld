@@ -158,26 +158,21 @@ socket.on("voice message", (msg) => {
   messages.scrollTop = messages.scrollHeight;
 });
 
+// --- Falling Flowers (existing) ---
 function createFlower() {
-  // Wrapper div for vertical fall
   const wrapper = document.createElement("div");
   wrapper.classList.add("flower-wrapper");
 
-  // Flower div inside wrapper for sway + rotate + glow
   const flower = document.createElement("div");
   flower.classList.add("flower");
   flower.innerText = "🌸";
 
-  // Random horizontal start position
   wrapper.style.left = Math.random() * 100 + "vw";
-
-  // Random font size for depth effect
   flower.style.fontSize = (20 + Math.random() * 15) + "px";
 
-  // Random animation durations
-  const fallDuration = 4 + Math.random() * 3;   // 4-7s
-  const swayDuration = 2 + Math.random() * 2;   // 2-4s
-  const rotateDuration = 3 + Math.random() * 4; // 3-7s
+  const fallDuration = 4 + Math.random() * 3;
+  const swayDuration = 2 + Math.random() * 2;
+  const rotateDuration = 3 + Math.random() * 4;
 
   wrapper.style.animationDuration = `${fallDuration}s`;
   flower.style.animationDuration = `${swayDuration}s, ${rotateDuration}s`;
@@ -185,12 +180,10 @@ function createFlower() {
   wrapper.appendChild(flower);
   document.body.appendChild(wrapper);
 
-  // Remove wrapper after max animation duration
   const maxDuration = Math.max(fallDuration, swayDuration, rotateDuration);
   setTimeout(() => wrapper.remove(), maxDuration * 1000);
 }
 
-// Toggle flowers
 document.getElementById("toggle-flowers").addEventListener("change", (e) => {
   if (e.target.checked) flowerInterval = setInterval(createFlower, 500);
   else { 
@@ -198,6 +191,30 @@ document.getElementById("toggle-flowers").addEventListener("change", (e) => {
     document.querySelectorAll(".flower-wrapper").forEach(f => f.remove()); 
   }
 });
+
+
+// --- Glowing Trail Particles (NEW) ---
+
+// Create a trail particle at given coordinates
+function createTrail(x, y) {
+  const trail = document.createElement("div");
+  trail.classList.add("trail-particle");
+  trail.style.left = x + "px";
+  trail.style.top = y + "px";
+  document.body.appendChild(trail);
+  setTimeout(() => trail.remove(), 1000); // remove after fade
+}
+
+// Desktop: mouse drag
+document.addEventListener("mousemove", (e) => {
+  if (e.buttons) createTrail(e.clientX, e.clientY);
+});
+
+// Mobile: touch drag
+document.addEventListener("touchmove", (e) => {
+  e.preventDefault();
+  for (let t of e.touches) createTrail(t.clientX, t.clientY);
+}, { passive: false });
 
 
 // Lightning
