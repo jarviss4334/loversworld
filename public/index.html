@@ -8,6 +8,9 @@
 </head>
 <body>
 
+  <!-- Static Page Background -->
+  <div id="page-bg"></div>
+
   <!-- Username prompt -->
   <div id="username-prompt" class="username-prompt">
     <input id="username-input" placeholder="Enter your name..." />
@@ -19,32 +22,22 @@
     <div class="menu-container">
       <button id="menu-btn">⋮</button>
       <div class="effect-switches" id="effect-switches">
-        <label>
-          <input type="checkbox" id="toggle-flowers" /> 🌸 Flowers
-        </label>
-        <label>
-          <input type="checkbox" id="toggle-lightning" /> ⚡ Lightning
-        </label>
-        <label>
-          <input type="checkbox" id="toggle-glow" checked /> 💫 Chat Glow
-        </label>
+        <label><input type="checkbox" id="toggle-flowers" /> 🌸 Flowers</label>
+        <label><input type="checkbox" id="toggle-lightning" /> ⚡ Lightning</label>
+        <label><input type="checkbox" id="toggle-glow" checked /> 💫 Chat Glow</label>
       </div>
     </div>
   </div>
 
   <!-- Chat Container -->
   <div class="chat-container" style="display:none">
-
-    <!-- Active Users List -->
     <div id="active-users" class="active-users">
       <h4>Online Users</h4>
       <ul id="users-list"></ul>
     </div>
 
-    <!-- Chat main area -->
     <div class="chat-main">
       <ul id="messages"></ul>
-      <!-- Typing Indicator -->
       <div id="typing-indicator" class="typing-indicator"></div>
 
       <form id="form" action="">
@@ -53,17 +46,17 @@
         <button type="button" id="record-btn" aria-pressed="false">🎤</button>
       </form>
     </div>
-
   </div>
 
-  <!-- Lightning overlay -->
+  <!-- Effects Elements -->
   <div id="lightning-container"></div>
   <div id="flash-overlay"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
+
+  <!-- Handle Username Submit -->
   <script>
-    // Join chat after entering username
     const usernameSubmit = document.getElementById("username-submit");
     usernameSubmit.addEventListener("click", () => {
       const name = document.getElementById("username-input").value.trim();
@@ -75,5 +68,6 @@
       document.getElementById("username-prompt").style.display = "none";
     });
   </script>
+
 </body>
 </html>
