@@ -239,3 +239,35 @@ body {
     flex: 0 0 120px;
   }
 }
+
+@media (max-width: 599px) {
+  .chat-container {
+    flex-direction: column;
+    width: 100%;
+    max-width: 400px;   /* fixed chat width for mobile */
+    margin: 0 auto;     /* center it */
+    height: 90vh;       /* almost full viewport height */
+    border-radius: 15px;
+  }
+
+  #active-users {
+    position: absolute;    /* overlay at top-right */
+    top: 10px;
+    right: 10px;
+    width: auto;
+    max-width: 150px;      /* small panel */
+    max-height: 200px;
+    background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(6px);
+    border-radius: 10px;
+    padding: 8px;
+    overflow-y: auto;
+    z-index: 5;
+  }
+
+  .chat-main {
+    width: 100%;
+    flex: 1;
+    margin-top: 50px;  /* leave space for floating active users */
+  }
+}
