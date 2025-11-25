@@ -240,60 +240,86 @@ body {
   }
 }
 
-/* Mobile layout */
+/* Mobile layout adjustments */
 @media (max-width: 599px) {
-  /* Chat container fills the screen */
-  .chat-container {
-    flex-direction: column;
-    width: 100vw;
-    height: 100vh; /* full viewport height */
-    border-radius: 0;
+  body, html {
+    height: 100%;
     margin: 0;
-    overflow: hidden;
-    position: relative;
+    padding: 0;
   }
 
-  /* Active users list: small box at top-right outside chat */
+  /* Chat container full screen */
+  .chat-container {
+    width: 100%;
+    height: 100vh; /* full viewport height */
+    flex-direction: column;
+    position: relative;
+    border-radius: 0;
+  }
+
+  /* Active users top inside chat */
   #active-users {
     position: absolute;
-    top: 0;
-    right: 0;
-    width: auto;
-    max-height: 50px; /* enough for 2 usernames */
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    max-height: 60px; /* enough for 2 users */
+    background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(6px);
+    border-radius: 10px;
     padding: 5px 10px;
-    border-radius: 0 0 0 10px;
-    background: rgba(0,0,0,0.25);
-    color: #fff;
+    overflow: hidden;
     font-size: 0.85em;
-    z-index: 5;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  /* Header container (three-dot menu) inside chat, top-right */
-  .header-container {
-    position: absolute;
-    top: 5px;
-    right: 10px;
     z-index: 10;
   }
 
-  /* Chat main area */
+  /* Chat main */
   .chat-main {
     flex: 1;
-    overflow-y: auto;
-    padding-top: 40px; /* space for header inside chat */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* keeps input at bottom */
+    overflow: hidden;
+    padding-top: 80px; /* space for active users and menu */
   }
 
-  /* Adjust messages list */
-  #messages {
-    padding: 10px;
+  /* Three-dot menu inside chat at top-right */
+  .header-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: auto;
+    text-align: right;
+    z-index: 11;
   }
 
-  /* Form/input area stays at bottom */
+  /* Input area fixed at bottom */
   #form {
-    position: relative;
-    bottom: 0;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border-top: 1px solid #ccc;
+    background: #ffffffcc;
+    backdrop-filter: blur(5px);
+    padding: 5px 10px;
+  }
+  #input {
+    flex: 1;
+    border: none;
+    border-radius: 20px;
+    padding: 10px;
+    outline: none;
+  }
+  #form button {
+    padding: 8px 12px;
+    border-radius: 50%;
+    background: #ff4d6d;
+    color: white;
+    border: none;
+    cursor: pointer;
+    flex: 0 0 auto;
   }
 }
+
