@@ -1,6 +1,6 @@
 const socket = io();
 
-let username = "";            
+let username = "";
 const form = document.getElementById("form");
 const input = document.getElementById("input");
 const messages = document.getElementById("messages");
@@ -19,13 +19,13 @@ let activeUsers = new Set();
 let typingTimeout;
 let isTyping = false;
 
-// --- Join chat function ---
+// Join Chat
 window.joinChat = function(name) {
   username = name;
   socket.emit("new user", username);
 };
 
-// --- Append message ---
+// Append Message
 function appendMessage(msgObj, type) {
   const li = document.createElement("li");
   li.classList.add(type);
@@ -41,7 +41,7 @@ function appendMessage(msgObj, type) {
   messages.scrollTop = messages.scrollHeight;
 }
 
-// --- Form submit ---
+// Send text
 form.addEventListener("submit", (e) => {
   e.preventDefault();
   if (!input.value || !username) return;
@@ -52,91 +52,73 @@ form.addEventListener("submit", (e) => {
   socket.emit("stop typing", username);
 });
 
-// --- Receive text messages ---
+// Receive text
 socket.on("chat message", (msg) => {
   if (msg.user !== username) appendMessage(msg, "received");
 });
 
-// --- Voice recording ---
+// Voice recording
 async function ensureMediaStream() {
   if (mediaStream) return mediaStream;
   try {
     mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     return mediaStream;
-  } catch (err) {
+  } catch {
     alert("Microphone access denied.");
     throw err;
   }
 }
 
 async function startRecording() {
-  if (!username) { alert("Enter your name first."); return; }
+  if (!username) return alert("Enter your name first.");
   socket.emit("start recording", username);
 
-  try {
-    const stream = await ensureMediaStream();
-    audioChunks = [];
-    mediaRecorder = new MediaRecorder(stream);
-    mediaRecorder.ondataavailable = e => { if (e.data.size) audioChunks.push(e.data); };
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(audioChunks, { type: "audio/webm" });
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        socket.emit("voice message", { user: username, audio: reader.result });
-      };
-      reader.readAsDataURL(blob);
+  const stream = await ensureMediaStream();
+  audioChunks = [];
+  mediaRecorder = new MediaRecorder(stream);
+
+  mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(audioChunks, { type: "audio/webm" });
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      socket.emit("voice message", { user: username, audio: reader.result });
     };
-    mediaRecorder.start();
-    recordBtn.textContent = "⏺️ Recording...";
-    recordBtn.setAttribute("aria-pressed", "true");
-  } catch (err) {
-    console.error("startRecording error:", err);
-  }
+    reader.readAsDataURL(blob);
+  };
+  mediaRecorder.start();
+  recordBtn.textContent = "⏺️ Recording...";
 }
 
 function stopRecording() {
-  if (!username) return;
   socket.emit("stop recording", username);
-  if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+  if (mediaRecorder?.state !== "inactive") mediaRecorder.stop();
   recordBtn.textContent = "🎤";
-  recordBtn.setAttribute("aria-pressed", "false");
 }
 
-// Mouse & touch events
 recordBtn.addEventListener("mousedown", e => { e.preventDefault(); startRecording(); });
-recordBtn.addEventListener("mouseup",   e => { e.preventDefault(); stopRecording(); });
+recordBtn.addEventListener("mouseup", e => { e.preventDefault(); stopRecording(); });
 recordBtn.addEventListener("touchstart", e => { e.preventDefault(); startRecording(); }, { passive: false });
-recordBtn.addEventListener("touchend",   e => { e.preventDefault(); stopRecording(); }, { passive: false });
+recordBtn.addEventListener("touchend", e => { e.preventDefault(); stopRecording(); }, { passive: false });
 
-// --- Receive voice messages ---
+// Receive voice messages
 socket.on("voice message", (msg) => {
   const li = document.createElement("li");
   li.classList.add(msg.user === username ? "sent" : "received");
 
-  const label = document.createElement("div");
-  label.style.fontWeight = "600";
-  label.textContent = `${msg.user}: `;
-
+  li.innerHTML = `<strong>${msg.user}:</strong><br>`;
   const audio = document.createElement("audio");
   audio.controls = true;
   audio.src = msg.audio;
   audio.preload = "none";
   audio.style.maxWidth = "100%";
-
-  li.appendChild(label);
   li.appendChild(audio);
-
-  const glowEnabled = document.getElementById("toggle-glow");
-  if (glowEnabled && glowEnabled.checked) {
-    li.classList.add("glow");
-    li.addEventListener("animationend", () => li.classList.remove("glow"), { once: true });
-  }
 
   messages.appendChild(li);
   messages.scrollTop = messages.scrollHeight;
 });
 
-// --- Flowers effect ---
+// Flowers
 function createFlower() {
   const flower = document.createElement("div");
   flower.classList.add("flower");
@@ -146,44 +128,27 @@ function createFlower() {
   document.body.appendChild(flower);
   setTimeout(() => flower.remove(), 6000);
 }
+
 document.getElementById("toggle-flowers").addEventListener("change", (e) => {
   if (e.target.checked) flowerInterval = setInterval(createFlower, 500);
   else { clearInterval(flowerInterval); document.querySelectorAll(".flower").forEach(f => f.remove()); }
 });
 
-// --- Lightning effect ---
+// Lightning
 const lightningContainer = document.getElementById("lightning-container");
 const flashOverlay = document.getElementById("flash-overlay");
 
 function strikeLightning() {
   if (!document.getElementById("toggle-lightning").checked) return;
-  const segments = [];
-  let x = 0, y = 0;
-
-  for (let i = 0; i < 15; i++) {
-    const seg = document.createElement("div");
-    seg.classList.add("lightning-segment");
-    const angle = Math.random() * 40 - 20;
-    seg.style.transform = `rotate(${angle}deg)`;
-    seg.style.left = x + "px";
-    seg.style.top = y + "px";
-    lightningContainer.appendChild(seg);
-    segments.push(seg);
-    x += 20 + Math.random() * 10;
-    y += 30 + Math.random() * 10;
-  }
-
-  segments.forEach((seg, index) => {
-    setTimeout(() => { seg.style.opacity = 1; setTimeout(() => seg.remove(), 150); }, index*50);
-  });
 
   flashOverlay.style.opacity = 0.5;
-  setTimeout(() => flashOverlay.style.opacity = 0, 150);
+  setTimeout(() => flashOverlay.style.opacity = 0, 200);
 }
 setInterval(strikeLightning, 5000 + Math.random() * 3000);
 
-// --- Active Users ---
-function updateUsersList() {
+// Active users
+socket.on("update users", (usersArray) => {
+  activeUsers = new Set(usersArray);
   const usersList = document.getElementById("users-list");
   usersList.innerHTML = "";
   activeUsers.forEach(u => {
@@ -192,26 +157,29 @@ function updateUsersList() {
     if(u === username) li.style.fontWeight = "bold";
     usersList.appendChild(li);
   });
-}
-socket.on("update users", (usersArray) => { activeUsers = new Set(usersArray); updateUsersList(); });
+});
 
-// --- Typing indicator ---
+// Typing system
 input.addEventListener("input", () => {
-  if (!isTyping) { socket.emit("typing", username); isTyping = true; }
+  if (!isTyping) socket.emit("typing", username);
+  isTyping = true;
   clearTimeout(typingTimeout);
   typingTimeout = setTimeout(() => { socket.emit("stop typing", username); isTyping = false; }, 1000);
 });
-socket.on("typing", (user) => { if(user !== username) { usersTyping.add(user); updateIndicator(); } });
-socket.on("stop typing", (user) => { usersTyping.delete(user); updateIndicator(); });
-socket.on("start recording", (user) => { if(user !== username) { recordingUsers.add(user); updateIndicator(); } });
-socket.on("stop recording", (user) => { recordingUsers.delete(user); updateIndicator(); });
+
+socket.on("typing", user => { if(user !== username){ usersTyping.add(user); updateIndicator(); }});
+socket.on("stop typing", user => { usersTyping.delete(user); updateIndicator(); });
+
+socket.on("start recording", user => { if(user !== username){ recordingUsers.add(user); updateIndicator(); }});
+socket.on("stop recording", user => { recordingUsers.delete(user); updateIndicator(); });
+
 function updateIndicator() {
-  if (recordingUsers.size > 0) typingIndicator.textContent = Array.from(recordingUsers).join(", ") + " is recording audio...";
-  else if (usersTyping.size > 0) typingIndicator.textContent = Array.from(usersTyping).join(", ") + " is typing...";
+  if (recordingUsers.size > 0) typingIndicator.textContent = [...recordingUsers].join(", ") + " is recording...";
+  else if (usersTyping.size > 0) typingIndicator.textContent = [...usersTyping].join(", ") + " is typing...";
   else typingIndicator.textContent = "";
 }
 
-// --- Smooth slideshow for page & chat container ---
+/* Background slideshow — FIXED — no zoom */
 const bgImages = [
   "https://files.catbox.moe/jzvuld.jpg",
   "https://files.catbox.moe/huovh5.jpg",
@@ -224,34 +192,22 @@ const bgImages = [
   "https://files.catbox.moe/ylpobz.jpg",
   "https://files.catbox.moe/4u6cnb.jpg"
 ];
+
+/* Background slideshow — slower timing (25s per image) */
 let bgIndex = 0;
-const pageBg = document.createElement("div");
-pageBg.id = "page-bg";
-document.body.prepend(pageBg);
 const chatContainer = document.querySelector(".chat-container");
+chatContainer.style.backgroundImage = `url('${bgImages[0]}')`;
 
-function changeBackgrounds() {
-  const nextImage = bgImages[bgIndex];
+function changeBackground() {
   bgIndex = (bgIndex + 1) % bgImages.length;
+  chatContainer.style.setProperty("--bg-next", `url('${bgImages[bgIndex]}')`);
+  chatContainer.classList.add("fade-bg");
 
-  // Page background fade
-  pageBg.style.opacity = 0;
-  setTimeout(() => { pageBg.style.backgroundImage = `url('${nextImage}')`; pageBg.style.opacity = 1; }, 200);
-
-  // Chat container background fade
-  chatContainer.style.setProperty('--chat-bg-next', `url('${nextImage}')`);
-  chatContainer.style.opacity = 0;
-  setTimeout(() => { chatContainer.style.backgroundImage = `url('${nextImage}')`; chatContainer.style.opacity = 1; }, 200);
+  setTimeout(() => {
+    chatContainer.style.backgroundImage = `url('${bgImages[bgIndex]}')`;
+    chatContainer.classList.remove("fade-bg");
+  }, 1500); // fade duration remains 1.5s
 }
 
-changeBackgrounds();
-setInterval(changeBackgrounds, 20000);
-
-// --- 3-dot menu toggle ---
-const menuBtn = document.getElementById("menu-btn");
-const effectSwitches = document.getElementById("effect-switches");
-
-menuBtn.addEventListener("click", () => {
-  effectSwitches.classList.toggle("show");
-});
-
+// Change every 25 seconds
+setInterval(changeBackground, 25000);
