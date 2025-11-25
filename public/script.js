@@ -158,21 +158,47 @@ socket.on("voice message", (msg) => {
   messages.scrollTop = messages.scrollHeight;
 });
 
-// Flowers
 function createFlower() {
+  // Wrapper div for vertical fall
+  const wrapper = document.createElement("div");
+  wrapper.classList.add("flower-wrapper");
+
+  // Flower div inside wrapper for sway + rotate + glow
   const flower = document.createElement("div");
   flower.classList.add("flower");
   flower.innerText = "🌸";
-  flower.style.left = Math.random() * 100 + "vw";
-  flower.style.animationDuration = 3 + Math.random() * 3 + "s";
-  document.body.appendChild(flower);
-  setTimeout(() => flower.remove(), 6000);
+
+  // Random horizontal start position
+  wrapper.style.left = Math.random() * 100 + "vw";
+
+  // Random font size for depth effect
+  flower.style.fontSize = (20 + Math.random() * 15) + "px";
+
+  // Random animation durations
+  const fallDuration = 4 + Math.random() * 3;   // 4-7s
+  const swayDuration = 2 + Math.random() * 2;   // 2-4s
+  const rotateDuration = 3 + Math.random() * 4; // 3-7s
+
+  wrapper.style.animationDuration = `${fallDuration}s`;
+  flower.style.animationDuration = `${swayDuration}s, ${rotateDuration}s`;
+
+  wrapper.appendChild(flower);
+  document.body.appendChild(wrapper);
+
+  // Remove wrapper after max animation duration
+  const maxDuration = Math.max(fallDuration, swayDuration, rotateDuration);
+  setTimeout(() => wrapper.remove(), maxDuration * 1000);
 }
 
+// Toggle flowers
 document.getElementById("toggle-flowers").addEventListener("change", (e) => {
   if (e.target.checked) flowerInterval = setInterval(createFlower, 500);
-  else { clearInterval(flowerInterval); document.querySelectorAll(".flower").forEach(f => f.remove()); }
+  else { 
+    clearInterval(flowerInterval); 
+    document.querySelectorAll(".flower-wrapper").forEach(f => f.remove()); 
+  }
 });
+
 
 // Lightning
 const lightningContainer = document.getElementById("lightning-container");
