@@ -211,3 +211,17 @@ function changeBackground() {
 
 // Change every 25 seconds
 setInterval(changeBackground, 25000);
+
+const menuBtn = document.getElementById("menu-btn");
+const effectSwitches = document.getElementById("effect-switches");
+
+menuBtn.addEventListener("click", () => {
+  effectSwitches.classList.toggle("show");
+});
+
+// Optional: click outside to close the menu
+document.addEventListener("click", (e) => {
+  if (!menuBtn.contains(e.target) && !effectSwitches.contains(e.target)) {
+    effectSwitches.classList.remove("show");
+  }
+});
