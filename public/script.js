@@ -1,6 +1,28 @@
 const socket = io();
 
 let username = "";
+
+// NEW CONNECTION SNIPPET 
+socket.on('connect', () => {
+  console.log('[client] connected', socket.id);
+  
+  // Show overlay initially
+  document.querySelector('.overlay')?.classList.remove('hidden');
+  
+  // Rejoin if username exists
+  const savedName = localStorage.getItem('chat_name');
+  if (savedName) {
+    username = savedName;
+    socket.emit('new user', username);
+  }
+});
+
+socket.io.on('reconnect', (attempt) => {
+  console.log('[client] reconnected after attempt', attempt);
+  document.querySelector('.overlay')?.classList.remove('hidden');
+  if (username) socket.emit('new user', username);
+});
+
 const form = document.getElementById("form");
 const input = document.getElementById("input");
 const messages = document.getElementById("messages");
