@@ -240,34 +240,60 @@ body {
   }
 }
 
+/* Mobile layout */
 @media (max-width: 599px) {
+  /* Chat container fills the screen */
   .chat-container {
     flex-direction: column;
-    width: 100%;
-    max-width: 400px;   /* fixed chat width for mobile */
-    margin: 0 auto;     /* center it */
-    height: 90vh;       /* almost full viewport height */
-    border-radius: 15px;
+    width: 100vw;
+    height: 100vh; /* full viewport height */
+    border-radius: 0;
+    margin: 0;
+    overflow: hidden;
+    position: relative;
   }
 
+  /* Active users list: small box at top-right outside chat */
   #active-users {
-    position: absolute;    /* overlay at top-right */
-    top: 10px;
-    right: 10px;
+    position: absolute;
+    top: 0;
+    right: 0;
     width: auto;
-    max-width: 150px;      /* small panel */
-    max-height: 200px;
-    background: rgba(255,255,255,0.25);
-    backdrop-filter: blur(6px);
-    border-radius: 10px;
-    padding: 8px;
-    overflow-y: auto;
+    max-height: 50px; /* enough for 2 usernames */
+    padding: 5px 10px;
+    border-radius: 0 0 0 10px;
+    background: rgba(0,0,0,0.25);
+    color: #fff;
+    font-size: 0.85em;
     z-index: 5;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
+  /* Header container (three-dot menu) inside chat, top-right */
+  .header-container {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    z-index: 10;
+  }
+
+  /* Chat main area */
   .chat-main {
-    width: 100%;
     flex: 1;
-    margin-top: 50px;  /* leave space for floating active users */
+    overflow-y: auto;
+    padding-top: 40px; /* space for header inside chat */
+  }
+
+  /* Adjust messages list */
+  #messages {
+    padding: 10px;
+  }
+
+  /* Form/input area stays at bottom */
+  #form {
+    position: relative;
+    bottom: 0;
   }
 }
