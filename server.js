@@ -1,3 +1,4 @@
+// server.js (fixed)
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -12,53 +13,126 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // Map of socket.id => username
 const connectedUsers = new Map();
+// Rooms map: roomId => Set of socket ids
+const rooms = new Map();
+let roomCounter = 1;
+
+function createRoom() {
+  const roomId = `room-${roomCounter++}`;
+  rooms.set(roomId, new Set());
+  return roomId;
+}
+
+function findAvailableRoom() {
+  for (const [roomId, members] of rooms.entries()) {
+    if (members.size < 2) return roomId;
+  }
+  return null;
+}
+
+function getUsernamesInRoom(roomId) {
+  const members = rooms.get(roomId) || new Set();
+  const names = [];
+  for (const socketId of members) {
+    const uname = connectedUsers.get(socketId);
+    if (uname) names.push(uname);
+  }
+  return names;
+}
 
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
-  // New user joins
+  // Immediately assign the connecting socket to a room (prevents global broadcasts)
+  let roomId = findAvailableRoom();
+  if (!roomId) {
+    roomId = createRoom();
+  }
+
+  socket.join(roomId);
+  rooms.get(roomId).add(socket.id);
+  socket.data.roomId = roomId;
+
+  // Inform the socket of its assigned room (client may ignore; it's optional)
+  socket.emit("room assigned", roomId);
+
+  // Update the users list for this room (usernames may arrive later when 'new user' fires)
+  io.to(roomId).emit("update users", getUsernamesInRoom(roomId));
+
+  // Assign username when client sends it (don't delay room assignment)
   socket.on("new user", (username) => {
     if (!username) return;
     connectedUsers.set(socket.id, username);
-    io.emit("update users", Array.from(connectedUsers.values()));
-    console.log("Users now:", Array.from(connectedUsers.values()));
+    // Emit updated usernames to only the members of this socket's room
+    const r = socket.data.roomId;
+    if (r) io.to(r).emit("update users", getUsernamesInRoom(r));
+    console.log(`${username} set for socket ${socket.id} in ${r}`);
   });
 
-  // Chat message
+  // Chat message -> emit only to the user's room
   socket.on("chat message", (msg) => {
-    io.emit("chat message", msg);
+    const r = socket.data.roomId;
+    if (!r) return;
+    io.to(r).emit("chat message", msg);
   });
 
-  // Voice message
+  // Voice message -> room only
   socket.on("voice message", (msg) => {
-    io.emit("voice message", msg);
+    const r = socket.data.roomId;
+    if (!r) return;
+    io.to(r).emit("voice message", msg);
   });
 
-  // Typing indicator
+  // Typing indicators -> broadcast to room (excluding sender)
   socket.on("typing", (user) => {
-    socket.broadcast.emit("typing", user);
+    const r = socket.data.roomId;
+    if (!r) return;
+    socket.to(r).emit("typing", user);
   });
 
   socket.on("stop typing", (user) => {
-    socket.broadcast.emit("stop typing", user);
+    const r = socket.data.roomId;
+    if (!r) return;
+    socket.to(r).emit("stop typing", user);
   });
 
-  // --- Voice recording indicator ---
+  // Voice recording indicators -> room only
   socket.on("start recording", (user) => {
-    socket.broadcast.emit("start recording", user);
+    const r = socket.data.roomId;
+    if (!r) return;
+    socket.to(r).emit("start recording", user);
   });
 
   socket.on("stop recording", (user) => {
-    socket.broadcast.emit("stop recording", user);
+    const r = socket.data.roomId;
+    if (!r) return;
+    socket.to(r).emit("stop recording", user);
   });
 
-  // Disconnect
+  // Disconnect handling
   socket.on("disconnect", () => {
-    if (connectedUsers.has(socket.id)) {
-      connectedUsers.delete(socket.id);
-      io.emit("update users", Array.from(connectedUsers.values()));
-      console.log("User disconnected:", socket.id);
-      console.log("Users now:", Array.from(connectedUsers.values()));
+    console.log("User disconnected:", socket.id);
+
+    const r = socket.data.roomId;
+    if (r && rooms.has(r)) {
+      const members = rooms.get(r);
+      members.delete(socket.id);
+
+      // Remove username mapping
+      if (connectedUsers.has(socket.id)) connectedUsers.delete(socket.id);
+
+      // If room becomes empty, delete it
+      if (members.size === 0) {
+        rooms.delete(r);
+        console.log(`${r} deleted (empty)`);
+      } else {
+        // Otherwise update the remaining users in the room
+        io.to(r).emit("update users", getUsernamesInRoom(r));
+        console.log(`${r} now has ${members.size} member(s) after disconnect`);
+      }
+    } else {
+      // Ensure we still remove username if somehow connectedUsers had it
+      if (connectedUsers.has(socket.id)) connectedUsers.delete(socket.id);
     }
   });
 
