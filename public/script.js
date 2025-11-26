@@ -1,5 +1,137 @@
 const socket = io();
 
+// ---------------- MUSIC FEATURE ------------------
+document.addEventListener("DOMContentLoaded", () => {
+
+  let musicEnabled = false;
+  let currentTrackIndex = 0;
+  let currentAudio = null;
+
+  const musicUrls = [
+    "https://files.catbox.moe/x4wwty.mp4",
+    "https://files.catbox.moe/dr6g3i.mp4",
+    "https://files.catbox.moe/hic3ht.mp4",
+    "https://files.catbox.moe/fhuh4s.mp4",
+    "https://files.catbox.moe/t8e1x9.mp4",
+    "https://files.catbox.moe/rmf1cg.mp4",
+    "https://files.catbox.moe/ioeftv.mp4",
+    "https://files.catbox.moe/ri548a.mp4",
+    "https://files.catbox.moe/jl8hvn.mp4",
+    "https://files.catbox.moe/ceyeyl.mp4",
+    "https://files.catbox.moe/6rm8vd.mp4",
+    "https://files.catbox.moe/bcrbr6.mp4",
+    "https://files.catbox.moe/paqtae.mp4",
+    "https://files.catbox.moe/mx0pha.mp4",
+    "https://files.catbox.moe/wfj659.mp4",
+    "https://files.catbox.moe/ip9a6m.mp4",
+    "https://files.catbox.moe/uj0338.mp4",
+    "https://files.catbox.moe/kofc8i.mp4",
+    "https://files.catbox.moe/ggx6bs.mp3",
+    "https://files.catbox.moe/jf1jjs.mp4",
+    "https://files.catbox.moe/i5i7a2.mp4",
+    "https://files.catbox.moe/ljzval.mp4",
+    "https://files.catbox.moe/5qox9n.mp4",
+    "https://files.catbox.moe/hi2whc.mp4",
+    "https://files.catbox.moe/h5hevr.mp4",
+    "https://files.catbox.moe/qevape.mp4",
+    "https://files.catbox.moe/s4us9i.mp3",
+    "https://files.catbox.moe/76g7qu.mp4",
+    "https://files.catbox.moe/zb08d5.mp4",
+    "https://files.catbox.moe/gzdd9f.mp3",
+    "https://files.catbox.moe/ni30vo.mp4",
+    "https://files.catbox.moe/zqmlpu.mp4",
+    "https://files.catbox.moe/t12usb.mp4",
+    "https://files.catbox.moe/9olfxv.mp4",
+    "https://files.catbox.moe/i541iw.mp4",
+    "https://files.catbox.moe/zfgl60.mp4",
+    "https://files.catbox.moe/b6fybu.mp4",
+    "https://files.catbox.moe/js05nr.mp4",
+    "https://files.catbox.moe/5504r6.mp3",
+    "https://files.catbox.moe/9pw1ym.mp4",
+    "https://files.catbox.moe/9nv0nw.mp3",
+    "https://files.catbox.moe/exa8zj.mp3"
+  ];
+
+  // ---------------- ELEMENTS ------------------
+  const musicToggleLabel = document.getElementById("toggle-music-label");
+  const musicToggle = document.getElementById("toggle-music");
+  const musicController = document.getElementById("music-controller");
+  const trackNameSpan = document.getElementById("track-name");
+  const playPauseBtn = document.getElementById("play-pause");
+  const nextBtn = document.getElementById("next-track");
+  const prevBtn = document.getElementById("prev-track");
+
+  // ---------------- MUSIC FUNCTIONS ------------------
+  function playTrack(index) {
+    if (currentAudio) currentAudio.pause();
+    currentTrackIndex = index;
+    currentAudio = new Audio(musicUrls[currentTrackIndex]);
+    currentAudio.volume = 0.25;
+    currentAudio.play().catch(err => console.log("Autoplay blocked:", err));
+    trackNameSpan.textContent = `Track ${currentTrackIndex + 1}`;
+
+    currentAudio.onended = () => {
+      currentTrackIndex = (currentTrackIndex + 1) % musicUrls.length;
+      playTrack(currentTrackIndex);
+    };
+  }
+
+  function startMusic() {
+    musicEnabled = true;
+    showMusicController();
+    playTrack(currentTrackIndex);
+  }
+
+  function stopMusic() {
+    musicEnabled = false;
+    if (currentAudio) currentAudio.pause();
+  }
+
+  function showMusicController() {
+    musicController.style.display = "flex";
+    musicController.style.zIndex = "12"; // ensures it's above chat
+  }
+
+  function setupMusicToggle() {
+    musicToggle.addEventListener("change", () => {
+      if (musicToggle.checked) startMusic();
+      else {
+        stopMusic();
+        musicController.style.display = "none";
+      }
+    });
+  }
+
+  // ---------------- NAVIGATOR BUTTONS ------------------
+  playPauseBtn.addEventListener("click", () => {
+    if (!currentAudio) playTrack(currentTrackIndex);
+    else if (currentAudio.paused) currentAudio.play();
+    else currentAudio.pause();
+  });
+
+  nextBtn.addEventListener("click", () => {
+    currentTrackIndex = (currentTrackIndex + 1) % musicUrls.length;
+    playTrack(currentTrackIndex);
+  });
+
+  prevBtn.addEventListener("click", () => {
+    currentTrackIndex = (currentTrackIndex - 1 + musicUrls.length) % musicUrls.length;
+    playTrack(currentTrackIndex);
+  });
+
+  // ---------------- MUSIC TOGGLE VISIBILITY BASED ON ENV ------------------
+  // Uncomment this line and set RENDER_MUSIC_ENABLED in your template/environment
+  if (typeof RENDER_MUSIC_ENABLED !== "undefined" && RENDER_MUSIC_ENABLED === "true") {
+    musicToggleLabel.style.display = "flex"; // show toggle only if enabled
+    setupMusicToggle();
+  } else {
+    musicToggleLabel.style.display = "none"; // hidden by default
+    musicEnabled = false;
+  }
+
+});
+
+
 let username = "";
 
 const form = document.getElementById("form");
@@ -308,4 +440,3 @@ document.addEventListener("click", (e) => {
     effectSwitches.classList.remove("show");
   }
 });
-
