@@ -1,3 +1,4 @@
+// server.js
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -9,11 +10,6 @@ const io = new Server(server);
 
 // Serve static files from /public
 app.use(express.static(path.join(__dirname, "public")));
-
-// Ping route for cronjob monitoring
-app.get("/ping", (req, res) => {
-  res.send("Server is alive ✅");
-});
 
 // Maps
 const connectedUsers = new Map();
@@ -96,6 +92,14 @@ io.on("connection", (socket) => {
 
   socket.on("error", (err) => console.error("Socket error:", err));
 });
+
+// Config route to expose feature flags safely
+app.get("/config", (req, res) => {
+  res.json({
+    musicEnabled: process.env.MUSIC_ENABLED === "true", // true/false
+  });
+});
+
 
 // Render port
 const PORT = process.env.PORT || 3000;
