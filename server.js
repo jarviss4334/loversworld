@@ -11,6 +11,11 @@ const io = new Server(server);
 // Serve static files from /public
 app.use(express.static(path.join(__dirname, "public")));
 
+// Ping route for cronjob monitoring 
+app.get("/ping", (req, res) => {
+  res.send("Server is alive ✅");
+});
+
 // Maps
 const connectedUsers = new Map();
 const rooms = new Map();
