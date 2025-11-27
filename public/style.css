@@ -176,24 +176,17 @@ body {
   background-image: var(--bg-next);
 }
 
-/* Active users top inside chat */
-#active-users {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 150px;
-  max-height: 120px;        /* increased space */
+/* Active Users Container */
+.active-users {
   background: rgba(255,255,255,0.25);
   backdrop-filter: blur(6px);
-  border-radius: 10px;
-  padding: 5px 10px;
-  overflow-y: auto;          /* ✨ important: scroll instead of hiding */
-  overflow-x: hidden;
-  font-size: 0.85em;
-  z-index: 10;
+  border-radius: 15px;
+  padding: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-weight: 600;
+  color: #fff; /* container text fallback */
 }
-
 
 /* Active Users Names - Pink with Glow */
 .active-users li {
@@ -221,7 +214,6 @@ body {
   display: flex;
   flex-direction: column;
 }
-
 #messages li {
   margin: 8px 0;
   padding: 10px 15px;
@@ -413,21 +405,23 @@ body {
   }
 
   /* Active users top inside chat */
-  #active-users {
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 120px;
-    max-height: 60px; /* enough for 2 users */
-    background: rgba(255,255,255,0.25);
-    backdrop-filter: blur(6px);
-    border-radius: 10px;
-    padding: 5px 10px;
-    overflow: hidden;
-    font-size: 0.85em;
-    z-index: 10;
-  }
+#active-users {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  max-height: 120px;        /* increased space */
+  background: rgba(255,255,255,0.25);
+  backdrop-filter: blur(6px);
+  border-radius: 10px;
+  padding: 5px 10px;
+  overflow-y: auto;          /* ✨ important: scroll instead of hiding */
+  overflow-x: hidden;
+  font-size: 0.85em;
+  z-index: 10;
+}
+
 
   /* Chat main */
   .chat-main {
