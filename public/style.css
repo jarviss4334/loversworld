@@ -209,12 +209,12 @@ body {
   list-style: none;
   padding: 10px;
   flex-grow: 1;
-  overflow-y: auto;
-  overflow-x: visible;   /* ADD */
-  overflow: visible;     /* ADD */
+  overflow-y: auto;          /* ✔ scrolling works */
+  overflow-x: hidden;        /* ✔ prevents horizontal overflow issues */
   display: flex;
   flex-direction: column;
 }
+
 #messages li {
   margin: 8px 0;
   padding: 10px 15px;
