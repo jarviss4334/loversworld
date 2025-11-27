@@ -1,12 +1,60 @@
+// script.js - full restored and fixed version
+
 const socket = io();
 
-// ---------------- MUSIC FEATURE ------------------
 document.addEventListener("DOMContentLoaded", () => {
 
+  /* ==========================
+     Elements & globals
+     ========================== */
+  // Main UI elements
+  const form = document.getElementById("form");
+  const input = document.getElementById("input");
+  const messages = document.getElementById("messages");
+  const recordBtn = document.getElementById("record-btn");
+  const typingIndicator = document.getElementById("typing-indicator");
+
+  // Reply bar (WhatsApp-style)
+  const replyBar = document.getElementById("reply-bar");
+  const repliedMessageText = document.getElementById("replied-message-text");
+  const cancelReplyBtn = document.getElementById("cancel-reply");
+
+  // Music & controls
+  const musicToggleLabel = document.getElementById("toggle-music-label");
+  const musicToggle = document.getElementById("toggle-music");
+  const musicController = document.getElementById("music-controller");
+  const trackNameSpan = document.getElementById("track-name");
+  const playPauseBtn = document.getElementById("play-pause");
+  const nextBtn = document.getElementById("next-track");
+  const prevBtn = document.getElementById("prev-track");
+
+  // Effects & UI toggles
+  const menuBtn = document.getElementById("menu-btn");
+  const effectSwitches = document.getElementById("effect-switches");
+
+  // Other
+  const lightningContainer = document.getElementById("lightning-container");
+  const flashOverlay = document.getElementById("flash-overlay");
+
+  // State
+  let username = "";
+  let repliedMessage = null; // { user, text } when replying
   let musicEnabled = false;
   let currentTrackIndex = 0;
   let currentAudio = null;
+  let mediaStream = null;
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let flowerInterval = null;
+  let usersTyping = new Set();
+  let recordingUsers = new Set();
+  let activeUsers = new Set();
+  let typingTimeout = null;
+  let isTyping = false;
 
+  /* ==========================
+     Music list (unchanged)
+     ========================== */
   const musicUrls = [
     "https://files.catbox.moe/x4wwty.mp4",
     "https://files.catbox.moe/dr6g3i.mp4",
@@ -52,467 +100,558 @@ document.addEventListener("DOMContentLoaded", () => {
     "https://files.catbox.moe/exa8zj.mp3"
   ];
 
-  // ---------------- ELEMENTS ------------------
-  const musicToggleLabel = document.getElementById("toggle-music-label");
-  const musicToggle = document.getElementById("toggle-music");
-  const musicController = document.getElementById("music-controller");
-  const trackNameSpan = document.getElementById("track-name");
-  const playPauseBtn = document.getElementById("play-pause");
-  const nextBtn = document.getElementById("next-track");
-  const prevBtn = document.getElementById("prev-track");
-
-  // ---------------- MUSIC FUNCTIONS ------------------
+  /* ==========================
+     Music helpers
+     ========================== */
   function playTrack(index) {
     if (currentAudio) currentAudio.pause();
-    currentTrackIndex = index;
+    currentTrackIndex = index % musicUrls.length;
     currentAudio = new Audio(musicUrls[currentTrackIndex]);
     currentAudio.volume = 0.25;
     currentAudio.play().catch(err => console.log("Autoplay blocked:", err));
     trackNameSpan.textContent = `Track ${currentTrackIndex + 1}`;
-
     currentAudio.onended = () => {
       currentTrackIndex = (currentTrackIndex + 1) % musicUrls.length;
       playTrack(currentTrackIndex);
     };
   }
-
   function startMusic() {
     musicEnabled = true;
-    showMusicController();
+    if (musicController) musicController.style.display = "flex";
     playTrack(currentTrackIndex);
   }
-
   function stopMusic() {
     musicEnabled = false;
     if (currentAudio) currentAudio.pause();
+    if (musicController) musicController.style.display = "none";
   }
 
-  function showMusicController() {
-    musicController.style.display = "flex";
-    musicController.style.zIndex = "12"; // ensures it's above chat
-  }
-
-  function setupMusicToggle() {
-    musicToggle.addEventListener("change", () => {
-      if (musicToggle.checked) startMusic();
-      else {
-        stopMusic();
-        musicController.style.display = "none";
-      }
+  if (typeof RENDER_MUSIC_ENABLED !== "undefined" && RENDER_MUSIC_ENABLED === "true") {
+    if (musicToggleLabel) musicToggleLabel.style.display = "flex";
+    if (musicToggle) musicToggle.addEventListener("change", () => {
+      if (musicToggle.checked) startMusic(); else stopMusic();
     });
+  } else {
+    if (musicToggleLabel) musicToggleLabel.style.display = "none";
+    musicEnabled = false;
   }
 
-  // ---------------- NAVIGATOR BUTTONS ------------------
-  playPauseBtn.addEventListener("click", () => {
+  if (playPauseBtn) playPauseBtn.addEventListener("click", () => {
     if (!currentAudio) playTrack(currentTrackIndex);
     else if (currentAudio.paused) currentAudio.play();
     else currentAudio.pause();
   });
+  if (nextBtn) nextBtn.addEventListener("click", () => { currentTrackIndex = (currentTrackIndex + 1) % musicUrls.length; playTrack(currentTrackIndex); });
+  if (prevBtn) prevBtn.addEventListener("click", () => { currentTrackIndex = (currentTrackIndex - 1 + musicUrls.length) % musicUrls.length; playTrack(currentTrackIndex); });
 
-  nextBtn.addEventListener("click", () => {
-    currentTrackIndex = (currentTrackIndex + 1) % musicUrls.length;
-    playTrack(currentTrackIndex);
+  /* ==========================
+     Active users & UI helpers
+     ========================== */
+  socket.on("update users", (users) => {
+    if (window.innerWidth >= 600) {
+      activeUsers = new Set(users);
+      updatePCActiveUsersList();
+    }
   });
 
-  prevBtn.addEventListener("click", () => {
-    currentTrackIndex = (currentTrackIndex - 1 + musicUrls.length) % musicUrls.length;
-    playTrack(currentTrackIndex);
-  });
-
-  // ---------------- MUSIC TOGGLE VISIBILITY BASED ON ENV ------------------
-  // Uncomment this line and set RENDER_MUSIC_ENABLED in your template/environment
-  if (typeof RENDER_MUSIC_ENABLED !== "undefined" && RENDER_MUSIC_ENABLED === "true") {
-    musicToggleLabel.style.display = "flex"; // show toggle only if enabled
-    setupMusicToggle();
-  } else {
-    musicToggleLabel.style.display = "none"; // hidden by default
-    musicEnabled = false;
+  function updatePCActiveUsersList() {
+    const usersList = document.getElementById("users-list");
+    if (!usersList) return;
+    usersList.innerHTML = "";
+    activeUsers.forEach(u => {
+      const li = document.createElement("li");
+      li.textContent = u;
+      if (u === username) li.style.fontWeight = "bold";
+      usersList.appendChild(li);
+    });
   }
 
-});
+  window.joinChat = function(name) {
+    if (!name) return alert("Please enter your name");
+    username = name;
+    if (window.innerWidth >= 600) {
+      activeUsers.add(username);
+      updatePCActiveUsersList();
+    }
+    socket.emit("new user", username);
+  };
 
-
-let username = "";
-
-const form = document.getElementById("form");
-const input = document.getElementById("input");
-const messages = document.getElementById("messages");
-const recordBtn = document.getElementById("record-btn");
-const typingIndicator = document.getElementById("typing-indicator");
-
-let flowerInterval = null;
-let lightningInterval = null;
-let mediaStream = null;
-let mediaRecorder = null;
-let audioChunks = [];
-
-let usersTyping = new Set();
-let recordingUsers = new Set();
-let activeUsers = new Set();
-let typingTimeout;
-let isTyping = false;
-let container = document.getElementById("mobile-user-notifications");
-
-//ACTIVE USERS LIST MYR
-socket.on("update users", (users) => {
-  if (window.innerWidth >= 600) {
-    activeUsers = new Set(users);
-    updatePCActiveUsersList();
-  } else {
-    // optional mobile handling
-  }
-});
-
-
-//PC SHIT FUCK
-function updatePCActiveUsersList() {
-  const usersList = document.getElementById("users-list");
-  if (!usersList) return;
-
-  usersList.innerHTML = "";
-  activeUsers.forEach(u => {
+  /* ==========================
+     Append message (handles replies)
+     ========================== */
+  function appendMessage(msgObj, type) {
     const li = document.createElement("li");
-    li.textContent = u;
-    if (u === username) li.style.fontWeight = "bold"; // highlight yourself
-    usersList.appendChild(li);
-  });
-}
+    li.classList.add(type);
 
-
-//Join Chat
-
-window.joinChat = function(name) {
-  username = name;
-
-  // Only add to activeUsers if desktop
-  if (window.innerWidth >= 600) {
-    activeUsers.add(username);
-    updatePCActiveUsersList();
-  }
-
-  socket.emit("new user", username);
-};
-
-
-// Append Message
-function appendMessage(msgObj, type) {
-  const li = document.createElement("li");
-  li.classList.add(type);
-  li.innerHTML = `<strong>${msgObj.user}:</strong> ${msgObj.text}`;
-
-  const glowEnabled = document.getElementById("toggle-glow");
-  if (glowEnabled && glowEnabled.checked) {
-    li.classList.add("glow");
-    li.addEventListener("animationend", () => li.classList.remove("glow"), { once: true });
-  }
-
-  messages.appendChild(li);
-  messages.scrollTop = messages.scrollHeight;
-}
-
-// Send text
-form.addEventListener("submit", (e) => {
-  e.preventDefault();
-  if (!input.value || !username) return;
-
-  const msg = { user: username, text: input.value };
-  socket.emit("chat message", msg);
-
-  appendMessage(msg, "sent");
-
-  const lastMsg = document.querySelector("#messages li:last-child");
-  if (lastMsg) {
-    const glowToggle = document.getElementById("toggle-glow");
-    const heartToggle = document.getElementById("toggle-heart"); // rename toggle if needed
-
-    // Glow effect
-    if (glowToggle && glowToggle.checked) {
-      lastMsg.classList.add("glow");
-      lastMsg.addEventListener("animationend", () => {
-        lastMsg.classList.remove("glow");
-      }, { once: true });
+    // If message has a replied preview
+    let replyHtml = "";
+    if (msgObj.replied) {
+      // trim long text for preview (one-line)
+      let preview = String(msgObj.replied.text || "").trim();
+      if (preview.length > 120) preview = preview.slice(0, 117) + "...";
+      replyHtml = `<div class="replied-preview" style="background:#f8f8f8; border-left:4px solid #ff69b4; padding:6px 8px; margin-bottom:6px; font-size:0.88em; border-radius:4px;">
+                    <strong>${escapeHtml(msgObj.replied.user)}:</strong> ${escapeHtml(preview)}
+                   </div>`;
     }
 
-    // Heart ripple effect
+    li.innerHTML = `${replyHtml}<strong>${escapeHtml(msgObj.user)}:</strong> ${escapeHtml(msgObj.text)}`;
+
+    // Effects: glow & heart ripple
+    const glowToggle = document.getElementById("toggle-glow");
+    if (glowToggle && glowToggle.checked) {
+      li.classList.add("glow");
+      li.addEventListener("animationend", () => li.classList.remove("glow"), { once: true });
+    }
+    const heartToggle = document.getElementById("toggle-heart");
     if (heartToggle && heartToggle.checked) {
       const heart = document.createElement("div");
       heart.classList.add("heart-ripple");
-      lastMsg.appendChild(heart);
+      li.appendChild(heart);
       setTimeout(() => heart.remove(), 700);
     }
+
+    messages.appendChild(li);
+    messages.scrollTop = messages.scrollHeight;
   }
 
-  input.value = "";
-  socket.emit("stop typing", username);
-});
+  // safe HTML escape helper
+  function escapeHtml(str) {
+    if (!str && str !== 0) return "";
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
 
-// Receive text
-socket.on("chat message", (msg) => {
-  if (msg.user !== username) {
-    appendMessage(msg, "received");
+  /* ==========================
+     Sending & receiving messages
+     ========================== */
+  // send
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!input.value || !username) return;
 
-    const lastMsg = document.querySelector("#messages li:last-child");
-    if (lastMsg) {
-      const glowToggle = document.getElementById("toggle-glow");
-      const heartToggle = document.getElementById("toggle-heart");
+    const msg = { user: username, text: input.value };
 
-      // Glow effect
-      if (glowToggle && glowToggle.checked) {
-        lastMsg.classList.add("glow");
-        lastMsg.addEventListener("animationend", () => {
-          lastMsg.classList.remove("glow");
-        }, { once: true });
-      }
-
-      // Heart ripple effect
-      if (heartToggle && heartToggle.checked) {
-        const heart = document.createElement("div");
-        heart.classList.add("heart-ripple");
-        lastMsg.appendChild(heart);
-        setTimeout(() => heart.remove(), 700);
-      }
+    if (repliedMessage) {
+      msg.replied = { user: repliedMessage.user, text: repliedMessage.text };
+      // clear reply UI
+      repliedMessage = null;
+      if (replyBar) replyBar.style.display = "none";
     }
+
+    socket.emit("chat message", msg);
+    appendMessage(msg, "sent");
+    input.value = "";
+    socket.emit("stop typing", username);
+  });
+
+  // receive
+  socket.on("chat message", (msg) => {
+    if (msg.user !== username) {
+      appendMessage(msg, "received");
+    }
+  });
+
+  /* ==========================
+     Voice recording (unchanged)
+     ========================== */
+  async function ensureMediaStream() {
+    if (!mediaStream) {
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+    return mediaStream;
   }
-});
 
-async function ensureMediaStream() {
-  if (!mediaStream) {
-    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  }
-  return mediaStream;
-}
+  async function startRecording() {
+    if (!username) return alert("Enter your name first.");
+    socket.emit("start recording", username);
 
+    const stream = await ensureMediaStream();
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
 
-
-
-async function startRecording() {
-  if (!username) return alert("Enter your name first.");
-  socket.emit("start recording", username);
-
-  const stream = await ensureMediaStream();
-  audioChunks = [];
-  mediaRecorder = new MediaRecorder(stream);
-
-  mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-  mediaRecorder.onstop = () => {
-    const blob = new Blob(audioChunks, { type: "audio/webm" });
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      socket.emit("voice message", { user: username, audio: reader.result });
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(audioChunks, { type: "audio/webm" });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        socket.emit("voice message", { user: username, audio: reader.result });
+      };
+      reader.readAsDataURL(blob);
     };
-    reader.readAsDataURL(blob);
-  };
-  mediaRecorder.start();
-  recordBtn.textContent = "⏺️ Recording...";
-}
-
-function stopRecording() {
-  socket.emit("stop recording", username);
-  if (mediaRecorder?.state !== "inactive") mediaRecorder.stop();
-  recordBtn.textContent = "🎤";
-}
-
-recordBtn.addEventListener("mousedown", e => { e.preventDefault(); startRecording(); });
-recordBtn.addEventListener("mouseup", e => { e.preventDefault(); stopRecording(); });
-recordBtn.addEventListener("touchstart", e => { e.preventDefault(); startRecording(); }, { passive: false });
-recordBtn.addEventListener("touchend", e => { e.preventDefault(); stopRecording(); }, { passive: false });
-
-// Receive voice messages
-socket.on("voice message", (msg) => {
-  const li = document.createElement("li");
-  li.classList.add(msg.user === username ? "sent" : "received");
-
-  li.innerHTML = `<strong>${msg.user}:</strong><br>`;
-  const audio = document.createElement("audio");
-  audio.controls = true;
-  audio.src = msg.audio;
-  audio.preload = "none";
-  audio.style.maxWidth = "100%";
-  li.appendChild(audio);
-
-  messages.appendChild(li);
-  messages.scrollTop = messages.scrollHeight;
-});
-
-// --- Falling Flowers (existing) ---
-function createFlower() {
-  const wrapper = document.createElement("div");
-  wrapper.classList.add("flower-wrapper");
-
-  const flower = document.createElement("div");
-  flower.classList.add("flower");
-  flower.innerText = "🌸";
-
-  wrapper.style.left = Math.random() * 100 + "vw";
-  flower.style.fontSize = (20 + Math.random() * 15) + "px";
-
-  const fallDuration = 4 + Math.random() * 3;
-  const swayDuration = 2 + Math.random() * 2;
-  const rotateDuration = 3 + Math.random() * 4;
-
-  wrapper.style.animationDuration = `${fallDuration}s`;
-  flower.style.animationDuration = `${swayDuration}s, ${rotateDuration}s`;
-
-  wrapper.appendChild(flower);
-  document.body.appendChild(wrapper);
-
-  const maxDuration = Math.max(fallDuration, swayDuration, rotateDuration);
-  setTimeout(() => wrapper.remove(), maxDuration * 1000);
-}
-
-document.getElementById("toggle-flowers").addEventListener("change", (e) => {
-  if (e.target.checked) flowerInterval = setInterval(createFlower, 500);
-  else { 
-    clearInterval(flowerInterval); 
-    document.querySelectorAll(".flower-wrapper").forEach(f => f.remove()); 
-  }
-});
-
-
-// --- Glowing Trail Particles (NEW) ---
-
-// Create a trail particle at given coordinates
-function createTrail(x, y) {
-  const trail = document.createElement("div");
-  trail.classList.add("trail-particle");
-  trail.style.left = x + "px";
-  trail.style.top = y + "px";
-  document.body.appendChild(trail);
-  setTimeout(() => trail.remove(), 1000); // remove after fade
-}
-
-// Desktop: mouse drag
-document.addEventListener("mousemove", (e) => {
-  if (e.buttons) createTrail(e.clientX, e.clientY);
-});
-
-// Mobile: touch drag
-document.addEventListener("touchmove", (e) => {
-  e.preventDefault();
-  for (let t of e.touches) createTrail(t.clientX, t.clientY);
-}, { passive: false });
-
-
-// Lightning
-const lightningContainer = document.getElementById("lightning-container");
-const flashOverlay = document.getElementById("flash-overlay");
-
-function strikeLightning() {
-  if (!document.getElementById("toggle-lightning").checked) return;
-
-  flashOverlay.style.opacity = 0.5;
-  setTimeout(() => flashOverlay.style.opacity = 0, 200);
-}
-setInterval(strikeLightning, 5000 + Math.random() * 3000);
-
-// Mobile join/leave notifications and PC active list update
-socket.on("user joined", (user) => {
-  if (window.innerWidth >= 600) {
-    activeUsers.add(user);
-    updatePCActiveUsersList(); // desktop: update list
-  } else {
-    showMobileNotification(user, "joined"); // mobile: show notification
-  }
-});
-
-socket.on("user left", (user) => {
-  if (window.innerWidth >= 600) {
-    activeUsers.delete(user);
-    updatePCActiveUsersList(); // desktop: update list
-  } else {
-    showMobileNotification(user, "left"); // mobile: show notification
-  }
-});
-
-
-
-// Function to show mobile handwriting-style notifications
-function showMobileNotification(username, action) {
-  let container = document.getElementById("mobile-user-notifications");
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "mobile-user-notifications";
-    container.style.position = "absolute";
-    container.style.top = "10px";
-    container.style.left = "50%";
-    container.style.transform = "translateX(-50%)";
-    container.style.zIndex = "20";
-    container.style.pointerEvents = "none";
-    document.body.appendChild(container);
+    mediaRecorder.start();
+    recordBtn.textContent = "⏺️ Recording...";
   }
 
-  const el = document.createElement("div");
-  el.classList.add("mobile-notification");
-  el.textContent = `${username} ${action}`;
-  container.appendChild(el);
-
-  setTimeout(() => el.remove(), 3000); // remove after 3 seconds
-}
-
-
-// Typing system
-input.addEventListener("input", () => {
-  if (!isTyping) socket.emit("typing", username);
-  isTyping = true;
-  clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(() => { socket.emit("stop typing", username); isTyping = false; }, 1000);
-});
-
-socket.on("typing", user => { if(user !== username){ usersTyping.add(user); updateIndicator(); }});
-socket.on("stop typing", user => { usersTyping.delete(user); updateIndicator(); });
-
-socket.on("start recording", user => { if(user !== username){ recordingUsers.add(user); updateIndicator(); }});
-socket.on("stop recording", user => { recordingUsers.delete(user); updateIndicator(); });
-
-function updateIndicator() {
-  if (recordingUsers.size > 0) typingIndicator.textContent = [...recordingUsers].join(", ") + " is recording...";
-  else if (usersTyping.size > 0) typingIndicator.textContent = [...usersTyping].join(", ") + " is typing...";
-  else typingIndicator.textContent = "";
-}
-
-/* Background slideshow — FIXED — no zoom */
-const bgImages = [
-  "https://files.catbox.moe/jzvuld.jpg",
-  "https://files.catbox.moe/huovh5.jpg",
-  "https://files.catbox.moe/a0qix1.jpg",
-  "https://files.catbox.moe/mgt1w8.jpg",
-  "https://files.catbox.moe/gvz7za.jpg",
-  "https://files.catbox.moe/h545yn.jpg",
-  "https://files.catbox.moe/c5bv8w.jpg",
-  "https://files.catbox.moe/iypooq.jpg",
-  "https://files.catbox.moe/ylpobz.jpg",
-  "https://files.catbox.moe/4u6cnb.jpg"
-];
-
-/* Background slideshow — slower timing (25s per image) */
-let bgIndex = 0;
-const chatContainer = document.querySelector(".chat-container");
-chatContainer.style.backgroundImage = `url('${bgImages[0]}')`;
-
-function changeBackground() {
-  bgIndex = (bgIndex + 1) % bgImages.length;
-  chatContainer.style.setProperty("--bg-next", `url('${bgImages[bgIndex]}')`);
-  chatContainer.classList.add("fade-bg");
-
-  setTimeout(() => {
-    chatContainer.style.backgroundImage = `url('${bgImages[bgIndex]}')`;
-    chatContainer.classList.remove("fade-bg");
-  }, 1500); // fade duration remains 1.5s
-}
-
-// Change every 25 seconds
-setInterval(changeBackground, 25000);
-
-const menuBtn = document.getElementById("menu-btn");
-const effectSwitches = document.getElementById("effect-switches");
-
-menuBtn.addEventListener("click", () => {
-  effectSwitches.classList.toggle("show");
-});
-
-// Optional: click outside to close the menu
-document.addEventListener("click", (e) => {
-  if (!menuBtn.contains(e.target) && !effectSwitches.contains(e.target)) {
-    effectSwitches.classList.remove("show");
+  function stopRecording() {
+    socket.emit("stop recording", username);
+    if (mediaRecorder?.state !== "inactive") mediaRecorder.stop();
+    recordBtn.textContent = "🎤";
   }
-});
+
+  recordBtn.addEventListener("mousedown", e => { e.preventDefault(); startRecording(); });
+  recordBtn.addEventListener("mouseup", e => { e.preventDefault(); stopRecording(); });
+  recordBtn.addEventListener("touchstart", e => { e.preventDefault(); startRecording(); }, { passive: false });
+  recordBtn.addEventListener("touchend", e => { e.preventDefault(); stopRecording(); }, { passive: false });
+
+  socket.on("voice message", (msg) => {
+    const li = document.createElement("li");
+    li.classList.add(msg.user === username ? "sent" : "received");
+
+    li.innerHTML = `<strong>${escapeHtml(msg.user)}:</strong><br>`;
+    const audio = document.createElement("audio");
+    audio.controls = true;
+    audio.src = msg.audio;
+    audio.preload = "none";
+    audio.style.maxWidth = "100%";
+    li.appendChild(audio);
+
+    messages.appendChild(li);
+    messages.scrollTop = messages.scrollHeight;
+  });
+
+  /* ==========================
+     Falling flowers & trail particles
+     ========================== */
+  function createFlower() {
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("flower-wrapper");
+
+    const flower = document.createElement("div");
+    flower.classList.add("flower");
+    flower.innerText = "🌸";
+
+    wrapper.style.left = Math.random() * 100 + "vw";
+    flower.style.fontSize = (20 + Math.random() * 15) + "px";
+
+    const fallDuration = 4 + Math.random() * 3;
+    const swayDuration = 2 + Math.random() * 2;
+    const rotateDuration = 3 + Math.random() * 4;
+
+    wrapper.style.animationDuration = `${fallDuration}s`;
+    flower.style.animationDuration = `${swayDuration}s, ${rotateDuration}s`;
+
+    wrapper.appendChild(flower);
+    document.body.appendChild(wrapper);
+
+    const maxDuration = Math.max(fallDuration, swayDuration, rotateDuration);
+    setTimeout(() => wrapper.remove(), maxDuration * 1000);
+  }
+
+  const toggleFlowers = document.getElementById("toggle-flowers");
+  if (toggleFlowers) {
+    toggleFlowers.addEventListener("change", (e) => {
+      if (e.target.checked) flowerInterval = setInterval(createFlower, 500);
+      else {
+        clearInterval(flowerInterval);
+        document.querySelectorAll(".flower-wrapper").forEach(f => f.remove());
+      }
+    });
+  }
+
+  // trail particles
+  function createTrail(x, y) {
+    const trail = document.createElement("div");
+    trail.classList.add("trail-particle");
+    trail.style.left = x + "px";
+    trail.style.top = y + "px";
+    document.body.appendChild(trail);
+    setTimeout(() => trail.remove(), 1000);
+  }
+  document.addEventListener("mousemove", (e) => {
+    if (e.buttons) createTrail(e.clientX, e.clientY);
+  });
+  document.addEventListener("touchmove", (e) => {
+    // do not prevent default globally; only prevented when swipe triggers
+    for (let t of e.touches) createTrail(t.clientX, t.clientY);
+  }, { passive: true });
+
+  /* ==========================
+     Lightning flash (guarded)
+     ========================== */
+  function strikeLightning() {
+    const toggleLightning = document.getElementById("toggle-lightning");
+    if (!toggleLightning || !toggleLightning.checked) return;
+    if (!flashOverlay) return;
+    flashOverlay.style.opacity = 0.5;
+    setTimeout(() => flashOverlay.style.opacity = 0, 200);
+  }
+  setInterval(strikeLightning, 5000 + Math.random() * 3000);
+
+  /* ==========================
+     Notifications (join/leave)
+     ========================== */
+  socket.on("user joined", (user) => {
+    if (window.innerWidth >= 600) {
+      activeUsers.add(user);
+      updatePCActiveUsersList();
+    } else {
+      showMobileNotification(user, "joined");
+    }
+  });
+  socket.on("user left", (user) => {
+    if (window.innerWidth >= 600) {
+      activeUsers.delete(user);
+      updatePCActiveUsersList();
+    } else {
+      showMobileNotification(user, "left");
+    }
+  });
+  function showMobileNotification(uname, action) {
+    let container = document.getElementById("mobile-user-notifications");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "mobile-user-notifications";
+      container.style.position = "absolute";
+      container.style.top = "10px";
+      container.style.left = "50%";
+      container.style.transform = "translateX(-50%)";
+      container.style.zIndex = "20";
+      container.style.pointerEvents = "none";
+      document.body.appendChild(container);
+    }
+    const el = document.createElement("div");
+    el.classList.add("mobile-notification");
+    el.textContent = `${uname} ${action}`;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+  }
+
+  /* ==========================
+     Typing indicators
+     ========================== */
+  input.addEventListener("input", () => {
+    if (!isTyping) socket.emit("typing", username);
+    isTyping = true;
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => { socket.emit("stop typing", username); isTyping = false; }, 1000);
+  });
+
+  socket.on("typing", user => { if (user !== username) { usersTyping.add(user); updateIndicator(); }});
+  socket.on("stop typing", user => { usersTyping.delete(user); updateIndicator(); });
+  socket.on("start recording", user => { if (user !== username) { recordingUsers.add(user); updateIndicator(); }});
+  socket.on("stop recording", user => { recordingUsers.delete(user); updateIndicator(); });
+
+  function updateIndicator() {
+    if (recordingUsers.size > 0) typingIndicator.textContent = [...recordingUsers].join(", ") + " is recording...";
+    else if (usersTyping.size > 0) typingIndicator.textContent = [...usersTyping].join(", ") + " is typing...";
+    else typingIndicator.textContent = "";
+  }
+
+  /* ==========================
+     Background slideshow (unchanged)
+     ========================== */
+  const bgImages = [
+    "https://files.catbox.moe/jzvuld.jpg",
+    "https://files.catbox.moe/huovh5.jpg",
+    "https://files.catbox.moe/a0qix1.jpg",
+    "https://files.catbox.moe/mgt1w8.jpg",
+    "https://files.catbox.moe/gvz7za.jpg",
+    "https://files.catbox.moe/h545yn.jpg",
+    "https://files.catbox.moe/c5bv8w.jpg",
+    "https://files.catbox.moe/iypooq.jpg",
+    "https://files.catbox.moe/ylpobz.jpg",
+    "https://files.catbox.moe/4u6cnb.jpg"
+  ];
+  let bgIndex = 0;
+  const chatContainer = document.querySelector(".chat-container");
+  if (chatContainer) chatContainer.style.backgroundImage = `url('${bgImages[0]}')`;
+  function changeBackground() {
+    if (!chatContainer) return;
+    bgIndex = (bgIndex + 1) % bgImages.length;
+    chatContainer.style.setProperty("--bg-next", `url('${bgImages[bgIndex]}')`);
+    chatContainer.classList.add("fade-bg");
+    setTimeout(() => {
+      chatContainer.style.backgroundImage = `url('${bgImages[bgIndex]}')`;
+      chatContainer.classList.remove("fade-bg");
+    }, 1500);
+  }
+  setInterval(changeBackground, 25000);
+
+  /* ==========================
+     Menu toggle
+     ========================== */
+  if (menuBtn && effectSwitches) {
+    menuBtn.addEventListener("click", () => {
+      effectSwitches.classList.toggle("show");
+    });
+    document.addEventListener("click", (e) => {
+      if (!menuBtn.contains(e.target) && !effectSwitches.contains(e.target)) {
+        effectSwitches.classList.remove("show");
+      }
+    });
+  }
+
+  /* ==========================
+     Swipe / Drag to reply (works for mobile, desktop, and click)
+     - triggers the WhatsApp-style reply bar above input
+     ========================== */
+  (function setupReplyTriggers() {
+    const container = messages;
+    if (!container) return;
+
+    let startX = 0;
+    let startY = 0;
+    const swipeThreshold = 80;
+    let isMouseDown = false;
+
+    // helper to extract clean text and user from li
+    function extractFromLi(li) {
+      const strong = li.querySelector("strong");
+      const user = strong ? (strong.textContent.replace(/:$/, "").trim()) : "";
+      // get message text by removing strong text from innerText (safe fallback)
+      let full = li.innerText || "";
+      if (strong) {
+        const strongText = strong.textContent;
+        // remove only the first occurrence of strongText
+        full = full.replace(new RegExp("^" + escapeRegExp(strongText)), "").trim();
+      }
+      return { user, text: full };
+    }
+
+    function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+    // main trigger that uses our triggerReply function (defined below)
+    function handleTrigger(targetLi) {
+      if (!targetLi) return;
+      triggerReply(targetLi);
+    }
+
+    // touch events
+    container.addEventListener("touchstart", (e) => {
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+    }, { passive: true });
+
+    container.addEventListener("touchmove", (e) => {
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - startX;
+      const deltaY = touch.clientY - startY;
+      if (Math.abs(deltaY) > Math.abs(deltaX)) return; // vertical scroll
+      if (deltaX > swipeThreshold) {
+        const target = e.target.closest("li");
+        if (target) {
+          // prevent scrolling only when we actually trigger reply
+          e.preventDefault();
+          handleTrigger(target);
+          startX = touch.clientX;
+        }
+      }
+    }, { passive: false });
+
+    // mouse events for desktop drag
+    container.addEventListener("mousedown", (e) => { isMouseDown = true; startX = e.clientX; startY = e.clientY; });
+    container.addEventListener("mousemove", (e) => {
+      if (!isMouseDown) return;
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+      if (Math.abs(deltaY) > Math.abs(deltaX)) return;
+      if (deltaX > swipeThreshold) {
+        const target = e.target.closest("li");
+        if (target) {
+          handleTrigger(target);
+          isMouseDown = false;
+        }
+      }
+    });
+    container.addEventListener("mouseup", () => { isMouseDown = false; });
+    container.addEventListener("mouseleave", () => { isMouseDown = false; });
+
+    // simple click/tap to reply as well (optional, like WhatsApp long-press)
+    container.addEventListener("click", (e) => {
+      const target = e.target.closest("li");
+      // if user tapped a sent/received bubble quickly, open the reply bar (makes UX easier)
+      if (target) {
+        // small delay to differentiate from drag/swipe
+        setTimeout(() => {
+          // require the user to hold ctrl/cmd for click-reply on desktop? No — we'll allow simple click.
+          // If you prefer to require modifier, check e.ctrlKey / e.metaKey here.
+          triggerReply(target);
+        }, 100);
+      }
+    });
+
+    // actual logic that fills reply UI
+    function triggerReply(messageEl) {
+      if (!messageEl || !username) {
+        // if user hasn't joined, show a brief hint
+        if (!username) {
+          // small toast style mobile notification
+          showMobileNotification("Please join chat first", "");
+        }
+        return;
+      }
+
+      const strong = messageEl.querySelector("strong");
+      if (!strong) return;
+
+      const user = strong.textContent.replace(/:$/, "").trim();
+      // compute message text content (remove strong content)
+      let full = messageEl.innerText || "";
+      full = full.replace(new RegExp("^" + escapeRegExp(strong.textContent)), "").trim();
+
+      // save replied message object
+      repliedMessage = { user, text: full };
+
+      // show reply bar
+      if (repliedMessageText) repliedMessageText.textContent = `${user}: ${full}`;
+      if (replyBar) replyBar.style.display = "flex";
+
+      // highlight
+      messageEl.classList.add("replying");
+      setTimeout(() => messageEl.classList.remove("replying"), 400);
+
+      // focus input
+      input.focus();
+    }
+
+    // expose triggerReply to outer scope (used elsewhere earlier)
+    window.triggerReply = (el) => triggerReply(el);
+
+  })();
+
+  /* ==========================
+     Reply cancel button
+     ========================== */
+  if (cancelReplyBtn) {
+    cancelReplyBtn.addEventListener("click", () => {
+      repliedMessage = null;
+      if (replyBar) replyBar.style.display = "none";
+      input.value = "";
+    });
+  }
+
+  /* ==========================
+     Utility helpers
+     ========================== */
+  function showMobileNotification(usernameText, action) {
+    // reusing earlier function behavior
+    if (!usernameText) return;
+    let container = document.getElementById("mobile-user-notifications");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "mobile-user-notifications";
+      container.style.position = "absolute";
+      container.style.top = "10px";
+      container.style.left = "50%";
+      container.style.transform = "translateX(-50%)";
+      container.style.zIndex = "20";
+      container.style.pointerEvents = "none";
+      document.body.appendChild(container);
+    }
+    const el = document.createElement("div");
+    el.classList.add("mobile-notification");
+    el.textContent = action ? `${usernameText} ${action}` : usernameText;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 2000);
+  }
+
+  /* ==========================
+     Finish DOMContentLoaded
+     ========================== */
+
+}); // end DOMContentLoaded
