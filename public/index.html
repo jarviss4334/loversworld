@@ -58,6 +58,13 @@
   <div class="chat-main">
     <ul id="messages"></ul>
     <div id="typing-indicator" class="typing-indicator"></div>
+	<!-- Reply Bar (for showing replied message) -->
+<div id="reply-bar" style="display:none; background:#f0f0f0; padding:5px 10px; border-left:4px solid #ff69b4; margin-bottom:5px; border-radius:4px; font-size:0.9em; position:relative;">
+  <span id="replied-message-text"></span>
+  <button type="button" id="cancel-reply" style="position:absolute; right:5px; top:5px; background:none; border:none; cursor:pointer;">✖</button>
+</div>
+
+
 
     <form id="form" action="">
       <input id="input" autocomplete="off" placeholder="Type a message..." />
