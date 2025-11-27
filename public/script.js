@@ -241,6 +241,14 @@ socket.on("chat message", (msg) => {
 
 
 
+async function ensureMediaStream() {
+  if (!mediaStream) {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  }
+  return mediaStream;
+}
+
+
 async function startRecording() {
   if (!username) return alert("Enter your name first.");
   socket.emit("start recording", username);
