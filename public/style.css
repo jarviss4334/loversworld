@@ -491,3 +491,29 @@ body {
     flex: 0 0 auto;
   }
 }
+
+/* Temporary pinky reply highlight */
+li.replying {
+  animation: pinky-glow 0.4s ease forwards;
+}
+
+@keyframes pinky-glow {
+  0% {
+    box-shadow: 0 0 0px rgba(255, 105, 180, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(255, 105, 180, 1);
+    transform: scale(1.03);
+  }
+  100% {
+    box-shadow: 0 0 0px rgba(255, 105, 180, 0);
+    transform: scale(1);
+  }
+}
+
+/* Optional: make the highlight more visible on test */
+li.replying.test-highlight {
+  background-color: rgba(255, 105, 180, 0.2);
+}
+
