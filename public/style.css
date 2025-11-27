@@ -404,24 +404,42 @@ body {
     border-radius: 0;
   }
 
-  /* Active users top inside chat */
-#active-users {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 150px;
-  max-height: 120px;        /* increased space */
-  background: rgba(255,255,255,0.25);
-  backdrop-filter: blur(6px);
-  border-radius: 10px;
-  padding: 5px 10px;
-  overflow-y: auto;          /* ✨ important: scroll instead of hiding */
-  overflow-x: hidden;
-  font-size: 0.85em;
-  z-index: 10;
-}
+  /* Mobile-only user notifications */
+  #mobile-user-notifications {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-family: "Cursive", sans-serif;
+    color: #ff66b2;
+    text-shadow: 0 0 6px #ff66b2, 0 0 12px #ff99cc;
+    font-size: 1em;
+    white-space: nowrap;
+  }
 
+  .mobile-notification {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.8);
+    animation: notify-appear 1s forwards, letters-merge 1.5s ease-out forwards;
+  }
+
+  @keyframes notify-appear {
+    0% { opacity: 0; transform: translateY(-20px) scale(0.8); }
+    50% { opacity: 1; transform: translateY(0) scale(1.05); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Optional letters merge effect */
+  @keyframes letters-merge {
+    0% { letter-spacing: 0.5em; opacity: 0; }
+    50% { letter-spacing: 0.1em; opacity: 1; }
+    100% { letter-spacing: normal; opacity: 1; }
+  }
 
   /* Chat main */
   .chat-main {
@@ -430,7 +448,7 @@ body {
     flex-direction: column;
     justify-content: space-between; /* keeps input at bottom */
     overflow: hidden;
-    padding-top: 80px; /* space for active users and menu */
+    padding-top: 80px; /* space for notifications */
   }
 
   /* Three-dot menu inside chat at top-right */
@@ -454,6 +472,7 @@ body {
     backdrop-filter: blur(5px);
     padding: 5px 10px;
   }
+
   #input {
     flex: 1;
     border: none;
@@ -461,6 +480,7 @@ body {
     padding: 10px;
     outline: none;
   }
+
   #form button {
     padding: 8px 12px;
     border-radius: 50%;
@@ -471,4 +491,3 @@ body {
     flex: 0 0 auto;
   }
 }
-
