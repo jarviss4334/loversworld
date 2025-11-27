@@ -151,12 +151,48 @@ let recordingUsers = new Set();
 let activeUsers = new Set();
 let typingTimeout;
 let isTyping = false;
+let container = document.getElementById("mobile-user-notifications");
 
-// Join Chat
+//ACTIVE USERS LIST MYR
+socket.on("update users", (users) => {
+  if (window.innerWidth >= 600) {
+    activeUsers = new Set(users);
+    updatePCActiveUsersList();
+  } else {
+    // optional mobile handling
+  }
+});
+
+
+//PC SHIT FUCK
+function updatePCActiveUsersList() {
+  const usersList = document.getElementById("users-list");
+  if (!usersList) return;
+
+  usersList.innerHTML = "";
+  activeUsers.forEach(u => {
+    const li = document.createElement("li");
+    li.textContent = u;
+    if (u === username) li.style.fontWeight = "bold"; // highlight yourself
+    usersList.appendChild(li);
+  });
+}
+
+
+//Join Chat
+
 window.joinChat = function(name) {
   username = name;
+
+  // Only add to activeUsers if desktop
+  if (window.innerWidth >= 600) {
+    activeUsers.add(username);
+    updatePCActiveUsersList();
+  }
+
   socket.emit("new user", username);
 };
+
 
 // Append Message
 function appendMessage(msgObj, type) {
@@ -239,14 +275,14 @@ socket.on("chat message", (msg) => {
   }
 });
 
-
-
 async function ensureMediaStream() {
   if (!mediaStream) {
     mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   }
   return mediaStream;
 }
+
+
 
 
 async function startRecording() {
@@ -369,18 +405,50 @@ function strikeLightning() {
 }
 setInterval(strikeLightning, 5000 + Math.random() * 3000);
 
-// Active users
-socket.on("update users", (usersArray) => {
-  activeUsers = new Set(usersArray);
-  const usersList = document.getElementById("users-list");
-  usersList.innerHTML = "";
-  activeUsers.forEach(u => {
-    const li = document.createElement("li");
-    li.textContent = u;
-    if(u === username) li.style.fontWeight = "bold";
-    usersList.appendChild(li);
-  });
+// Mobile join/leave notifications and PC active list update
+socket.on("user joined", (user) => {
+  if (window.innerWidth >= 600) {
+    activeUsers.add(user);
+    updatePCActiveUsersList(); // desktop: update list
+  } else {
+    showMobileNotification(user, "joined"); // mobile: show notification
+  }
 });
+
+socket.on("user left", (user) => {
+  if (window.innerWidth >= 600) {
+    activeUsers.delete(user);
+    updatePCActiveUsersList(); // desktop: update list
+  } else {
+    showMobileNotification(user, "left"); // mobile: show notification
+  }
+});
+
+
+
+// Function to show mobile handwriting-style notifications
+function showMobileNotification(username, action) {
+  let container = document.getElementById("mobile-user-notifications");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "mobile-user-notifications";
+    container.style.position = "absolute";
+    container.style.top = "10px";
+    container.style.left = "50%";
+    container.style.transform = "translateX(-50%)";
+    container.style.zIndex = "20";
+    container.style.pointerEvents = "none";
+    document.body.appendChild(container);
+  }
+
+  const el = document.createElement("div");
+  el.classList.add("mobile-notification");
+  el.textContent = `${username} ${action}`;
+  container.appendChild(el);
+
+  setTimeout(() => el.remove(), 3000); // remove after 3 seconds
+}
+
 
 // Typing system
 input.addEventListener("input", () => {
