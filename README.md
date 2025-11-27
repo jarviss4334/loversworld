@@ -33,19 +33,24 @@ A modern, real-time private chat system designed exclusively for couples who wan
 
 
 
-💡 How It Works
+<section id="how-it-works">
+  <h2>💡 How It Works</h2>
 
-Enter your name
-
-Join the  chat
-
-Chat privately with full confidence
-
-Those wo need the music mode in the 3 dot menu
-   *Fork the Repo
-   *Add enviiornment variable on render
-   *SET MUSIC_ENABLED=true(off by default)
-   *enjoy the songs which can be altered in the pc
+  <ol>
+    <li>Enter your name</li>
+    <li>Join the chat</li>
+    <li>Chat privately with full confidence</li>
+    <li>
+      Those who need the Music Mode in the 3-dot menu:
+      <ul>
+        <li>Fork the Repo</li>
+        <li>Add environment variable on Render</li>
+        <li>Set <code>MUSIC_ENABLED=true</code> (off by default)</li>
+        <li>Enjoy the songs, which can be altered on the PC</li>
+      </ul>
+    </li>
+  </ol>
+</section>
 
 <p align="center">
   <a href="https://wa.me/918129927512" target="_blank">
