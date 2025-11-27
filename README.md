@@ -12,9 +12,9 @@ A modern, real-time private chat system designed exclusively for couples who wan
 
 ## 🌟 Features
 
-- 🔐 **Private Rooms** with unique 4-digit PIN  
+- 🔐 **Private Rooms** which only locks 2 persons this avoids the privacy concerns
 - ⚡ Real-time messaging  
-- 💬 Instagram-style chat bubbles  
+- 💬 Whatsapp Like UI
 - 📱 Mobile-friendly UI  
 - 👀 Typing indicators  
 - 🎨 Beautiful animations  
@@ -31,25 +31,21 @@ A modern, real-time private chat system designed exclusively for couples who wan
 
 ---
 
-## 🛠️ Setup
 
-bash
-git clone <your-repo-link>
-cd <project-folder>
-npm install
-npm start
 
 💡 How It Works
 
 Enter your name
 
-Join the global chat
+Join the  chat
 
-Create a private room → Receive a 4-digit PIN
+Chat privately with full confidence
 
-Share PIN with your partner
-
-Chat privately with full isolation from global chat
+Those wo need the music mode in the 3 dot menu
+   *Fork the Repo
+   *Add enviiornment variable on render
+   *SET MUSIC_ENABLED=true(off by default)
+   *enjoy the songs which can be altered in the pc
 
 🆘 Need Help or Want Custom Features?
 <p align="center"> <a href="https://wa.me/<918129927512>" target="_blank"> <img src="https://img.shields.io/badge/Message%20Me%20on%20WhatsApp-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" /> </a> </p>
