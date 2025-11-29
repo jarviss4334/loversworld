@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap');
 /* Body & static webpage background */
 body {
   font-family: "Segoe UI", sans-serif;
@@ -389,6 +390,10 @@ body {
 
 /* Mobile layout adjustments */
 @media (max-width: 599px) {
+/* Hide active users list only on mobile */
+  #active-users {
+    display: none !important;
+}
   body, html {
     height: 100%;
     margin: 0;
@@ -407,7 +412,7 @@ body {
   /* Mobile-only user notifications */
   #mobile-user-notifications {
     position: absolute;
-    top: 10px;
+    top: 15px;
     left: 50%;
     transform: translateX(-50%);
     pointer-events: none;
@@ -415,10 +420,10 @@ body {
     display: flex;
     flex-direction: column;
     gap: 5px;
-    font-family: "Cursive", sans-serif;
+    font-family: "Dancing Script", cursive;
     color: #ff66b2;
     text-shadow: 0 0 6px #ff66b2, 0 0 12px #ff99cc;
-    font-size: 1em;
+    font-size: 1.4em;
     white-space: nowrap;
   }
 
@@ -429,26 +434,33 @@ body {
   }
 
   @keyframes notify-appear {
-    0% { opacity: 0; transform: translateY(-20px) scale(0.8); }
-    50% { opacity: 1; transform: translateY(0) scale(1.05); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
-  }
+  0% { opacity: 0; transform: translateY(-20px) scale(0.8); }
+  50% { opacity: 1; transform: translateY(0) scale(1.05); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
 
   /* Optional letters merge effect */
   @keyframes letters-merge {
-    0% { letter-spacing: 0.5em; opacity: 0; }
-    50% { letter-spacing: 0.1em; opacity: 1; }
-    100% { letter-spacing: normal; opacity: 1; }
-  }
+  0% { letter-spacing: 0.4em; opacity: 0; }
+  50% { letter-spacing: 0.1em; opacity: 1; }
+  100% { letter-spacing: normal; opacity: 1; }
+}
 
   /* Chat main */
   .chat-main {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* keeps input at bottom */
+    justify-content: flex-start !important;
     overflow: hidden;
-    padding-top: 80px; /* space for notifications */
+    padding-top: 20px;
+  }
+
+  #messages {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
   }
 
   /* Three-dot menu inside chat at top-right */
