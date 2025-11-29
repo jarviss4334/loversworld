@@ -384,41 +384,39 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ==========================
      Notifications (join/leave)
      ========================== */
-  socket.on("user joined", (user) => {
-    if (window.innerWidth >= 600) {
-      activeUsers.add(user);
-      updatePCActiveUsersList();
-    } else {
-      showMobileNotification(user, "joined");
-    }
-  });
-  socket.on("user left", (user) => {
-    if (window.innerWidth >= 600) {
-      activeUsers.delete(user);
-      updatePCActiveUsersList();
-    } else {
-      showMobileNotification(user, "left");
-    }
-  });
-  function showMobileNotification(uname, action) {
-    let container = document.getElementById("mobile-user-notifications");
-    if (!container) {
-      container = document.createElement("div");
-      container.id = "mobile-user-notifications";
-      container.style.position = "absolute";
-      container.style.top = "10px";
-      container.style.left = "50%";
-      container.style.transform = "translateX(-50%)";
-      container.style.zIndex = "20";
-      container.style.pointerEvents = "none";
-      document.body.appendChild(container);
-    }
-    const el = document.createElement("div");
-    el.classList.add("mobile-notification");
-    el.textContent = `${uname} ${action}`;
-    container.appendChild(el);
-    setTimeout(() => el.remove(), 3000);
+
+     let previousUsers = [];
+
+socket.on("update users", (userList) => {
+  if (window.innerWidth >= 600) {
+    // Desktop: just update the active users list
+    updatePCActiveUsersList(userList);
+  } else {
+    // Mobile: detect who joined or left
+    const joinedUsers = userList.filter((u) => !previousUsers.includes(u));
+    const leftUsers = previousUsers.filter((u) => !userList.includes(u));
+
+    joinedUsers.forEach((user) => showMobileNotification(user, "joined"));
+    leftUsers.forEach((user) => showMobileNotification(user, "left"));
   }
+
+  previousUsers = userList;
+});
+
+function showMobileNotification(uname, action) {
+  console.log("MOBILE NOTIFICATION TRIGGERED:", uname, action);
+
+  const container = document.getElementById("mobile-user-notifications");
+  if (!container) return;
+
+  const el = document.createElement("div");
+  el.classList.add("mobile-notification");
+  el.textContent = `${uname} ${action}`;
+
+  container.appendChild(el);
+
+  setTimeout(() => el.remove(), 3000);
+}
 
   /* ==========================
      Typing indicators
