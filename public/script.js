@@ -51,6 +51,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let activeUsers = new Set();
   let typingTimeout = null;
   let isTyping = false;
+  let startX = 0;
+  let isRecording = false;
+  let canceled = false;
+
 
   /* ==========================
      Music list (unchanged)
@@ -275,13 +279,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
     mediaRecorder.onstop = () => {
-      const blob = new Blob(audioChunks, { type: "audio/webm" });
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        socket.emit("voice message", { user: username, audio: reader.result });
-      };
-      reader.readAsDataURL(blob);
-    };
+    if (mediaRecorder.canceled) return; // ❌ stop sending if canceled
+
+    const blob = new Blob(audioChunks, { type: "audio/webm" });
+    const reader = new FileReader();
+    reader.onloadend = () => {
+    socket.emit("voice message", { user: username, audio: reader.result });
+  };
+    reader.readAsDataURL(blob);
+};
     mediaRecorder.start();
     recordBtn.textContent = "⏺️ Recording...";
   }
@@ -292,10 +298,65 @@ document.addEventListener("DOMContentLoaded", () => {
     recordBtn.textContent = "🎤";
   }
 
-  recordBtn.addEventListener("mousedown", e => { e.preventDefault(); startRecording(); });
-  recordBtn.addEventListener("mouseup", e => { e.preventDefault(); stopRecording(); });
-  recordBtn.addEventListener("touchstart", e => { e.preventDefault(); startRecording(); }, { passive: false });
-  recordBtn.addEventListener("touchend", e => { e.preventDefault(); stopRecording(); }, { passive: false });
+  const slideText = document.getElementById("slideToCancel");
+
+function handleStart(e) {
+    if (isRecording) return;
+
+    isRecording = true;
+    canceled = false;
+    startX = e.touches ? e.touches[0].clientX : e.clientX;
+
+    slideText.classList.add("show");
+
+    startRecording();
+}
+
+function handleMove(e) {
+    if (!isRecording) return;
+
+    const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+    const diff = startX - currentX;
+
+    if (diff > 80) { // slide left threshold
+        canceled = true;
+        slideText.classList.add("canceling");
+        recordBtn.style.background = "gray";
+    } else {
+        canceled = false;
+        slideText.classList.remove("canceling");
+        recordBtn.style.background = "";
+    }
+}
+
+function handleEnd() {
+    if (!isRecording) return;
+
+    slideText.classList.remove("show", "canceling");
+    recordBtn.style.background = "";
+
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.canceled = canceled; // attach cancel info directly
+        mediaRecorder.stop();
+    }
+    // Reset UI regardless of cancel
+    recordBtn.textContent = "🎤";
+
+    isRecording = false;
+    canceled = false;
+}
+
+
+// Desktop
+recordBtn.addEventListener("mousedown", handleStart);
+window.addEventListener("mousemove", handleMove);
+window.addEventListener("mouseup", handleEnd);
+
+// Mobile
+recordBtn.addEventListener("touchstart", handleStart, { passive: false });
+recordBtn.addEventListener("touchmove", handleMove, { passive: false });
+recordBtn.addEventListener("touchend", handleEnd, { passive: false });
+
 
   socket.on("voice message", (msg) => {
     const li = document.createElement("li");
@@ -647,6 +708,9 @@ function showMobileNotification(uname, action) {
     container.appendChild(el);
     setTimeout(() => el.remove(), 2000);
   }
+
+
+
 
   /* ==========================
      Finish DOMContentLoaded
