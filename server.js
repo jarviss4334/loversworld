@@ -11,7 +11,7 @@ const io = new Server(server);
 // Serve static files from /public
 app.use(express.static(path.join(__dirname, "public")));
 
-// Ping route for cronjob monitoring 
+// Ping route for cronjob monitoring
 app.get("/ping", (req, res) => {
   res.send("Server is alive ✅");
 });
@@ -79,6 +79,13 @@ io.on("connection", (socket) => {
   // Voice recording indicators
   socket.on("start recording", (user) => socket.to(roomId).emit("start recording", user));
   socket.on("stop recording", (user) => socket.to(roomId).emit("stop recording", user));
+
+  // Delete message handler
+socket.on("delete message", (data) => {
+  // Broadcast delete event to the room
+  io.to(socket.data.roomId).emit("delete message", data);
+});
+
 
   // Disconnect
   socket.on("disconnect", () => {
