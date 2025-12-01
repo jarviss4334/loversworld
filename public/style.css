@@ -529,3 +529,26 @@ li.replying.test-highlight {
   background-color: rgba(255, 105, 180, 0.2);
 }
 
+/* ===== Slide-to-Cancel Voice Recording ===== */
+.slide-cancel {
+  position: absolute;
+  left: -140px;     /* distance of the text to the left */
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  font-size: 14px;
+  color: #aaa;
+  transition: 0.3s ease;
+  pointer-events: none;
+}
+
+.slide-cancel.show {
+  opacity: 1;
+}
+
+.slide-cancel.canceling {
+  color: red;
+  transform: translate(-20px, -50%);
+}
+
+
