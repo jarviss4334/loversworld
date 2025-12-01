@@ -186,6 +186,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function appendMessage(msgObj, type) {
     const li = document.createElement("li");
     li.classList.add(type);
+    //ADDING METADATA TO EVERY MESG
+    li.setAttribute("data-user", msgObj.user);
+    li.setAttribute("data-text", msgObj.text);
+
 
     // If message has a replied preview
     let replyHtml = "";
@@ -230,34 +234,124 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ==========================
-     Sending & receiving messages
-     ========================== */
-  // send
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    if (!input.value || !username) return;
+   Sending & receiving messages
+   ========================== */
 
-    const msg = { user: username, text: input.value };
+// SEND
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!input.value || !username) return;
 
-    if (repliedMessage) {
-      msg.replied = { user: repliedMessage.user, text: repliedMessage.text };
-      // clear reply UI
-      repliedMessage = null;
-      if (replyBar) replyBar.style.display = "none";
-    }
+  const text = input.value.trim();
+  const msg = { user: username, text };
 
-    socket.emit("chat message", msg);
-    appendMessage(msg, "sent");
+  // If replying to a message
+  if (repliedMessage) {
+    msg.replied = {
+      user: repliedMessage.user,
+      text: repliedMessage.text
+    };
+  }
+
+  /* =====================================
+        DELETE COMMAND ("dlt")
+    ===================================== */
+  if (text === "dlt" && repliedMessage) {
+    socket.emit("delete message", {
+      targetUser: repliedMessage.user,
+      targetText: repliedMessage.text,
+      commandUser: username,    // who sent "dlt"
+      commandText: "dlt"
+    });
+
+    // Clear reply UI
+    repliedMessage = null;
+    if (replyBar) replyBar.style.display = "none";
+
+    // DO NOT append "dlt" locally
     input.value = "";
-    socket.emit("stop typing", username);
-  });
+    return;
+  }
 
-  // receive
-  socket.on("chat message", (msg) => {
-    if (msg.user !== username) {
-      appendMessage(msg, "received");
+  // Normal message
+  socket.emit("chat message", msg);
+  appendMessage(msg, "sent");
+
+  // Reset UI
+  repliedMessage = null;
+  if (replyBar) replyBar.style.display = "none";
+  input.value = "";
+  socket.emit("stop typing", username);
+});
+
+// RECEIVE
+socket.on("chat message", (msg) => {
+  if (msg.user !== username) {
+    appendMessage(msg, "received");
+  }
+});
+
+/* ==========================
+   Animate message delete (glowing dust)
+========================== */
+function animateDeleteMessage(li) {
+  const rect = li.getBoundingClientRect();
+  const count = 50; // increased number of particles
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+
+  for (let i = 0; i < count; i++) {
+    const particle = document.createElement("div");
+    particle.classList.add("glow-particle");
+
+    // Random spread and velocity
+    const angle = Math.random() * 2 * Math.PI;
+    const radius = Math.random() * 80 + 20; // distance to fly
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+
+    particle.style.setProperty("--x", x + "px");
+    particle.style.setProperty("--y", y + "px");
+    particle.style.left = centerX + "px";
+    particle.style.top = centerY + "px";
+    particle.style.animationDuration = (Math.random() * 0.8 + 0.6) + "s"; // vary speed
+
+    document.body.appendChild(particle);
+
+    // remove after animation
+    setTimeout(() => particle.remove(), 1200);
+  }
+
+  // fade out and shrink the message bubble
+  li.style.transition = "opacity 0.6s, transform 0.6s";
+  li.style.opacity = 0;
+  li.style.transform = "scale(0.3) rotate(" + (Math.random()*30-15) + "deg)";
+  setTimeout(() => li.remove(), 600);
+}
+
+/* =====================================
+   Handle delete command with animation
+   ===================================== */
+socket.on("delete message", (data) => {
+  const items = document.querySelectorAll("#messages li");
+
+  items.forEach(li => {
+    const u = li.getAttribute("data-user");
+    const t = li.getAttribute("data-text");
+
+    // Animate the target replied message
+    if (u === data.targetUser && t === data.targetText) {
+      animateDeleteMessage(li);
+    }
+
+    // Animate the "dlt" command message itself
+    if (u === data.commandUser && t === data.commandText) {
+      animateDeleteMessage(li);
     }
   });
+});
+
+
 
   /* ==========================
      Voice recording (unchanged)
@@ -708,10 +802,6 @@ function showMobileNotification(uname, action) {
     container.appendChild(el);
     setTimeout(() => el.remove(), 2000);
   }
-
-
-
-
   /* ==========================
      Finish DOMContentLoaded
      ========================== */
