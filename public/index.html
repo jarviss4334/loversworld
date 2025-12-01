@@ -68,12 +68,18 @@
 
 
     <form id="form" action="">
-      <input id="input" autocomplete="off" placeholder="Type a message..." />
-      <button>Send</button>
+  <input id="input" autocomplete="off" placeholder="Type a message..." />
+  <button>Send</button>
+
+  <!-- Mic Button Wrapper -->
+  <div style="position: relative; display:inline-block;">
       <button type="button" id="record-btn" aria-pressed="false">🎤</button>
-    </form>
+
+      <!-- Slide-To-Cancel -->
+      <div id="slideToCancel" class="slide-cancel">← Slide to cancel</div>
   </div>
-</div>
+</form>
+
 
 
   <!-- Effects Elements -->
