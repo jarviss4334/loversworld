@@ -551,4 +551,28 @@ li.replying.test-highlight {
   transform: translate(-20px, -50%);
 }
 
+/* Glowing dust particle effect */
+.glow-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: radial-gradient(circle, #ff69b4, #ffccff);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1000;
+  animation: particle-fall 1s forwards;
+}
+
+@keyframes particle-fall {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--x, 0px), var(--y, 50px)) scale(0.2);
+  }
+}
+
+
 
