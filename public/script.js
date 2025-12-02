@@ -38,6 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // State
   let username = "";
+  let messageCounter = 0;
   let repliedMessage = null; // { user, text } when replying
   let musicEnabled = false;
   let currentTrackIndex = 0;
@@ -187,8 +188,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const li = document.createElement("li");
     li.classList.add(type);
     //ADDING METADATA TO EVERY MESG
-    li.setAttribute("data-user", msgObj.user);
-    li.setAttribute("data-text", msgObj.text);
+    li.dataset.user = msgObj.user;
+    li.dataset.text = msgObj.text || "";
+    li.dataset.id = msgObj.id || (messageCounter++).toString(); // unique ID
 
 
     // If message has a replied preview
@@ -243,13 +245,22 @@ form.addEventListener("submit", (e) => {
   if (!input.value || !username) return;
 
   const text = input.value.trim();
-  const msg = { user: username, text };
+
+  // *** FIXED: include an id and ts when sending a chat message ***
+  const msg = {
+    user: username,
+    text,
+    id: (messageCounter++).toString(),
+    ts: Date.now()
+  };
 
   // If replying to a message
   if (repliedMessage) {
+    // *** FIXED: include replied message id so delete can target it exactly ***
     msg.replied = {
       user: repliedMessage.user,
-      text: repliedMessage.text
+      text: repliedMessage.text,
+      id: repliedMessage.id || null
     };
   }
 
@@ -258,11 +269,13 @@ form.addEventListener("submit", (e) => {
     ===================================== */
   if (text === "dlt" && repliedMessage) {
     socket.emit("delete message", {
-      targetUser: repliedMessage.user,
-      targetText: repliedMessage.text,
-      commandUser: username,    // who sent "dlt"
-      commandText: "dlt"
+        targetUser: repliedMessage.user,
+        targetText: repliedMessage.text,
+        targetId: repliedMessage.id, // SEND ID
+        commandUser: username,
+        commandText: "dlt"
     });
+
 
     // Clear reply UI
     repliedMessage = null;
@@ -290,6 +303,8 @@ socket.on("chat message", (msg) => {
     appendMessage(msg, "received");
   }
 });
+
+
 
 /* ==========================
    Animate message delete (glowing dust)
@@ -338,9 +353,13 @@ socket.on("delete message", (data) => {
   items.forEach(li => {
     const u = li.getAttribute("data-user");
     const t = li.getAttribute("data-text");
+    const id = li.getAttribute("data-id"); // *** FIXED: read id from element ***
 
-    // Animate the target replied message
-    if (u === data.targetUser && t === data.targetText) {
+    // Animate the target replied message (match by id first, fallback to user+text)
+    if (
+      id === data.targetId ||
+      (u === data.targetUser && t === data.targetText)
+    ) {
       animateDeleteMessage(li);
     }
 
@@ -353,8 +372,9 @@ socket.on("delete message", (data) => {
 
 
 
+
   /* ==========================
-     Voice recording (unchanged)
+     Voice recording (unchanged except emit includes id)
      ========================== */
   async function ensureMediaStream() {
     if (!mediaStream) {
@@ -378,8 +398,15 @@ socket.on("delete message", (data) => {
     const blob = new Blob(audioChunks, { type: "audio/webm" });
     const reader = new FileReader();
     reader.onloadend = () => {
-    socket.emit("voice message", { user: username, audio: reader.result });
-  };
+      // *** FIXED: include id and ts for voice message so deletes work across clients ***
+      const voiceMsg = {
+        user: username,
+        audio: reader.result,
+        id: (messageCounter++).toString(),
+        ts: Date.now()
+      };
+      socket.emit("voice message", voiceMsg);
+    };
     reader.readAsDataURL(blob);
 };
     mediaRecorder.start();
@@ -402,6 +429,9 @@ function handleStart(e) {
     startX = e.touches ? e.touches[0].clientX : e.clientX;
 
     slideText.classList.add("show");
+    // Show recording indicator
+    startRecordingIndicator();
+    socket.emit("start recording", username);
 
     startRecording();
 }
@@ -433,6 +463,9 @@ function handleEnd() {
         mediaRecorder.canceled = canceled; // attach cancel info directly
         mediaRecorder.stop();
     }
+    // Stop the recording indicator for self
+    stopRecordingIndicator();
+    socket.emit("stop recording", username);
     // Reset UI regardless of cancel
     recordBtn.textContent = "🎤";
 
@@ -456,6 +489,11 @@ recordBtn.addEventListener("touchend", handleEnd, { passive: false });
     const li = document.createElement("li");
     li.classList.add(msg.user === username ? "sent" : "received");
 
+    // REQUIRED FOR DELETE
+    li.dataset.user = msg.user;
+    li.dataset.text = "voice"; // fixed label for matching
+    li.dataset.id = msg.id || (messageCounter++).toString();
+
     li.innerHTML = `<strong>${escapeHtml(msg.user)}:</strong><br>`;
     const audio = document.createElement("audio");
     audio.controls = true;
@@ -466,7 +504,8 @@ recordBtn.addEventListener("touchend", handleEnd, { passive: false });
 
     messages.appendChild(li);
     messages.scrollTop = messages.scrollHeight;
-  });
+});
+
 
   /* ==========================
      Falling flowers & trail particles
@@ -573,26 +612,55 @@ function showMobileNotification(uname, action) {
   setTimeout(() => el.remove(), 3000);
 }
 
-  /* ==========================
-     Typing indicators
-     ========================== */
-  input.addEventListener("input", () => {
-    if (!isTyping) socket.emit("typing", username);
-    isTyping = true;
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => { socket.emit("stop typing", username); isTyping = false; }, 1000);
-  });
+ /* ==========================
+   Typing & Recording indicators
+========================== */
+input.addEventListener("input", () => {
+  if (!isTyping) socket.emit("typing", username);
+  isTyping = true;
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => {
+    socket.emit("stop typing", username);
+    isTyping = false;
+  }, 1000);
+});
 
-  socket.on("typing", user => { if (user !== username) { usersTyping.add(user); updateIndicator(); }});
-  socket.on("stop typing", user => { usersTyping.delete(user); updateIndicator(); });
-  socket.on("start recording", user => { if (user !== username) { recordingUsers.add(user); updateIndicator(); }});
-  socket.on("stop recording", user => { recordingUsers.delete(user); updateIndicator(); });
-
-  function updateIndicator() {
-    if (recordingUsers.size > 0) typingIndicator.textContent = [...recordingUsers].join(", ") + " is recording...";
-    else if (usersTyping.size > 0) typingIndicator.textContent = [...usersTyping].join(", ") + " is typing...";
-    else typingIndicator.textContent = "";
+// OTHER USERS
+socket.on("typing", user => {
+  if (user !== username) {
+    usersTyping.add(user);
+    updateIndicator();
   }
+});
+socket.on("stop typing", user => {
+  if (user !== username) {
+    usersTyping.delete(user);
+    updateIndicator();
+  }
+});
+socket.on("start recording", user => {
+  if (user !== username) {
+    recordingUsers.add(user);
+    updateIndicator();
+  }
+});
+socket.on("stop recording", user => {
+  if (user !== username) {
+    recordingUsers.delete(user);
+    updateIndicator();
+  }
+});
+
+
+function updateIndicator() {
+  if (recordingUsers.size > 0) {
+    typingIndicator.textContent = [...recordingUsers].join(", ") + " is recording...";
+  } else if (usersTyping.size > 0) {
+    typingIndicator.textContent = [...usersTyping].join(", ") + " is typing...";
+  } else {
+    typingIndicator.textContent = "";
+  }
+}
 
   /* ==========================
      Background slideshow (unchanged)
@@ -748,7 +816,11 @@ function showMobileNotification(uname, action) {
       full = full.replace(new RegExp("^" + escapeRegExp(strong.textContent)), "").trim();
 
       // save replied message object
-      repliedMessage = { user, text: full };
+      repliedMessage = {
+    user,
+    text: full,
+    id: messageEl.dataset.id   // ADD THIS
+};
 
       // show reply bar
       if (repliedMessageText) repliedMessageText.textContent = `${user}: ${full}`;
