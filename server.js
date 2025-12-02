@@ -8,10 +8,10 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Serve static files from /public
+// Serve static files
 app.use(express.static(path.join(__dirname, "public")));
 
-// Ping route for cronjob monitoring
+// Ping route
 app.get("/ping", (req, res) => {
   res.send("Server is alive ✅");
 });
@@ -45,7 +45,7 @@ function getUsernamesInRoom(roomId) {
   return names;
 }
 
-// Socket.io
+// Socket.io logic
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
@@ -65,34 +65,34 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("update users", getUsernamesInRoom(roomId));
   });
 
-  // Chat messages
-  ["chat message", "voice message"].forEach((event) => {
-    socket.on(event, (msg) => {
-      io.to(roomId).emit(event, msg);
-    });
+  // Chat messages (NO DUPLICATE TO SENDER)
+  socket.on("chat message", (msg) => {
+    socket.broadcast.to(roomId).emit("chat message", msg);
+  });
+
+  // Voice messages (NO DUPLICATE TO SENDER)
+  socket.on("voice message", (msg) => {
+    socket.broadcast.to(roomId).emit("voice message", msg);
   });
 
   // Typing indicators
   socket.on("typing", (user) => socket.to(roomId).emit("typing", user));
   socket.on("stop typing", (user) => socket.to(roomId).emit("stop typing", user));
 
-  // Voice recording indicators
+  // Recording indicators
   socket.on("start recording", (user) => socket.to(roomId).emit("start recording", user));
   socket.on("stop recording", (user) => socket.to(roomId).emit("stop recording", user));
 
-  // Delete message handler
-socket.on("delete message", (data) => {
-  // Broadcast delete event to the room
-  io.to(socket.data.roomId).emit("delete message", data);
-});
-
+  // Delete message
+  socket.on("delete message", (data) => {
+    io.to(roomId).emit("delete message", data);
+  });
 
   // Disconnect
   socket.on("disconnect", () => {
     rooms.get(roomId)?.delete(socket.id);
     connectedUsers.delete(socket.id);
 
-    // Delete empty rooms
     if (rooms.get(roomId)?.size === 0) {
       rooms.delete(roomId);
       console.log(`${roomId} deleted (empty)`);
@@ -105,14 +105,15 @@ socket.on("delete message", (data) => {
   socket.on("error", (err) => console.error("Socket error:", err));
 });
 
-// Config route to expose feature flags safely
+// Config route
 app.get("/config", (req, res) => {
   res.json({
-    musicEnabled: process.env.MUSIC_ENABLED === "true", // true/false
+    musicEnabled: process.env.MUSIC_ENABLED === "true",
   });
 });
 
-
 // Render port
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () =>
+  console.log(`Server running on port ${PORT}`)
+);
