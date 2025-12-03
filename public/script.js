@@ -374,105 +374,135 @@ socket.on("delete message", (data) => {
 
 
   /* ==========================
-     Voice recording (unchanged except emit includes id)
-     ========================== */
-  async function ensureMediaStream() {
-    if (!mediaStream) {
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    }
-    return mediaStream;
+   Voice recording (fixed)
+   ========================== */
+
+function startRecordingIndicator() {
+  // Optional: show recording UI
+  console.log("Recording started...");
+}
+
+function stopRecordingIndicator() {
+  // Optional: hide recording UI
+  console.log("Recording stopped...");
+}
+
+async function ensureMediaStream() {
+  if (!mediaStream) {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   }
+  return mediaStream;
+}
 
-  async function startRecording() {
-    if (!username) return alert("Enter your name first.");
-    socket.emit("start recording", username);
+// Helper function to append a voice message to the chat
+function appendVoiceMessage(msg) {
+  const li = document.createElement("li");
+  li.classList.add(msg.user === username ? "sent" : "received");
 
-    const stream = await ensureMediaStream();
-    audioChunks = [];
-    mediaRecorder = new MediaRecorder(stream);
+  li.dataset.user = msg.user;
+  li.dataset.text = "voice";
+  li.dataset.id = msg.id;
 
-    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-    mediaRecorder.onstop = () => {
-    if (mediaRecorder.canceled) return; // ❌ stop sending if canceled
+  li.innerHTML = `<strong>${escapeHtml(msg.user)}:</strong><br>`;
+  const audio = document.createElement("audio");
+  audio.controls = true;
+  audio.src = msg.audio;
+  audio.preload = "none";
+  audio.style.maxWidth = "100%";
+  li.appendChild(audio);
 
-    const blob = new Blob(audioChunks, { type: "audio/webm" });
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      // *** FIXED: include id and ts for voice message so deletes work across clients ***
-      const voiceMsg = {
-        user: username,
-        audio: reader.result,
-        id: (messageCounter++).toString(),
-        ts: Date.now()
-      };
-      socket.emit("voice message", voiceMsg);
-    };
-    reader.readAsDataURL(blob);
-};
-    mediaRecorder.start();
-    recordBtn.textContent = "⏺️ Recording...";
-  }
+  messages.appendChild(li);
+  messages.scrollTop = messages.scrollHeight;
+}
 
-  function stopRecording() {
-    socket.emit("stop recording", username);
-    if (mediaRecorder?.state !== "inactive") mediaRecorder.stop();
-    recordBtn.textContent = "🎤";
-  }
-
+async function handleStart(e) {
   const slideText = document.getElementById("slideToCancel");
+  if (isRecording) return;
 
-function handleStart(e) {
-    if (isRecording) return;
+  isRecording = true;
+  canceled = false;
+  startX = e.touches ? e.touches[0].clientX : e.clientX;
 
-    isRecording = true;
-    canceled = false;
-    startX = e.touches ? e.touches[0].clientX : e.clientX;
+  slideText.classList.add("show");
+  startRecordingIndicator();
 
-    slideText.classList.add("show");
-    // Show recording indicator
-    startRecordingIndicator();
+  const stream = await ensureMediaStream();
+  audioChunks = [];
+  mediaRecorder = new MediaRecorder(stream);
+  mediaRecorder.canceled = false;
+
+  mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
+
+  mediaRecorder.onstart = () => {
     socket.emit("start recording", username);
+  };
 
-    startRecording();
+  mediaRecorder.onstop = () => {
+    stopRecordingIndicator();
+
+    if (!mediaRecorder.canceled) {
+      const blob = new Blob(audioChunks, { type: "audio/webm" });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const voiceMsg = {
+          user: username,
+          audio: reader.result,
+          id: (messageCounter++).toString(),
+          ts: Date.now()
+        };
+        socket.emit("voice message", voiceMsg);
+        appendVoiceMessage(voiceMsg); // append locally for sender
+      };
+      reader.readAsDataURL(blob);
+    }
+
+    socket.emit("stop recording", username);
+
+    // Reset UI
+    recordBtn.textContent = "🎤";
+    isRecording = false;
+    canceled = false;
+  };
+
+  mediaRecorder.start();
+  recordBtn.textContent = "⏺️ Recording...";
 }
 
 function handleMove(e) {
-    if (!isRecording) return;
+  const slideText = document.getElementById("slideToCancel");
+  if (!isRecording) return;
 
-    const currentX = e.touches ? e.touches[0].clientX : e.clientX;
-    const diff = startX - currentX;
+  const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+  const diff = startX - currentX;
 
-    if (diff > 80) { // slide left threshold
-        canceled = true;
-        slideText.classList.add("canceling");
-        recordBtn.style.background = "gray";
-    } else {
-        canceled = false;
-        slideText.classList.remove("canceling");
-        recordBtn.style.background = "";
-    }
+  if (diff > 80) {
+    canceled = true;
+    slideText.classList.add("canceling");
+    recordBtn.style.background = "gray";
+  } else {
+    canceled = false;
+    slideText.classList.remove("canceling");
+    recordBtn.style.background = "";
+  }
 }
 
 function handleEnd() {
-    if (!isRecording) return;
+  const slideText = document.getElementById("slideToCancel");
+  if (!isRecording) return;
 
-    slideText.classList.remove("show", "canceling");
-    recordBtn.style.background = "";
+  slideText.classList.remove("show", "canceling");
+  recordBtn.style.background = "";
 
-    if (mediaRecorder && mediaRecorder.state === "recording") {
-        mediaRecorder.canceled = canceled; // attach cancel info directly
-        mediaRecorder.stop();
-    }
-    // Stop the recording indicator for self
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecorder.canceled = canceled;
+    mediaRecorder.stop(); // triggers onstop
+  } else {
     stopRecordingIndicator();
-    socket.emit("stop recording", username);
-    // Reset UI regardless of cancel
     recordBtn.textContent = "🎤";
-
     isRecording = false;
     canceled = false;
+  }
 }
-
 
 // Desktop
 recordBtn.addEventListener("mousedown", handleStart);
@@ -484,27 +514,13 @@ recordBtn.addEventListener("touchstart", handleStart, { passive: false });
 recordBtn.addEventListener("touchmove", handleMove, { passive: false });
 recordBtn.addEventListener("touchend", handleEnd, { passive: false });
 
-
-  socket.on("voice message", (msg) => {
-    const li = document.createElement("li");
-    li.classList.add(msg.user === username ? "sent" : "received");
-
-    // REQUIRED FOR DELETE
-    li.dataset.user = msg.user;
-    li.dataset.text = "voice"; // fixed label for matching
-    li.dataset.id = msg.id || (messageCounter++).toString();
-
-    li.innerHTML = `<strong>${escapeHtml(msg.user)}:</strong><br>`;
-    const audio = document.createElement("audio");
-    audio.controls = true;
-    audio.src = msg.audio;
-    audio.preload = "none";
-    audio.style.maxWidth = "100%";
-    li.appendChild(audio);
-
-    messages.appendChild(li);
-    messages.scrollTop = messages.scrollHeight;
+// Receiving voice messages from other users
+socket.on("voice message", (msg) => {
+  if (msg.user !== username) {
+    appendVoiceMessage(msg);
+  }
 });
+
 
 
   /* ==========================
