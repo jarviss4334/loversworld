@@ -572,7 +572,48 @@ li.replying.test-highlight {
     opacity: 0;
     transform: translate(var(--x, 0px), var(--y, 50px)) scale(0.2);
   }
+
+  /*new button niggger*/
+  .action-btn {
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  background: #ff4fa1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 6px;
+  transition: 0.2s ease;
 }
+
+.action-btn svg {
+  width: 26px;
+  height: 26px;
+  fill: white;
+}
+
+.action-btn:active {
+  transform: scale(0.9);
+}
+
+/* Pink pulse for the recording button */
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 12px #ff99ff, 0 0 24px #ff66ff, 0 0 36px #ff33ff;
+  }
+  100% {
+    box-shadow: 0 0 24px #ff99ff, 0 0 48px #ff66ff, 0 0 72px #ff33ff;
+  }
+}
+
+.recording-pulse {
+  animation: pulseGlow 1s infinite alternate;
+}
+
+
+
 
 
 
