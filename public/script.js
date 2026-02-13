@@ -1,25 +1,13 @@
-// script.js - full restored and fixed version
-
 const socket = io();
-
 document.addEventListener("DOMContentLoaded", () => {
-
-  /* ==========================
-     Elements & globals
-     ========================== */
-  // Main UI elements
   const form = document.getElementById("form");
   const input = document.getElementById("input");
   const messages = document.getElementById("messages");
   const recordBtn = document.getElementById("record-btn");
   const typingIndicator = document.getElementById("typing-indicator");
-
-  // Reply bar (WhatsApp-style)
   const replyBar = document.getElementById("reply-bar");
   const repliedMessageText = document.getElementById("replied-message-text");
   const cancelReplyBtn = document.getElementById("cancel-reply");
-
-  // Music & controls
   const musicToggleLabel = document.getElementById("toggle-music-label");
   const musicToggle = document.getElementById("toggle-music");
   const musicController = document.getElementById("music-controller");
@@ -27,16 +15,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const playPauseBtn = document.getElementById("play-pause");
   const nextBtn = document.getElementById("next-track");
   const prevBtn = document.getElementById("prev-track");
-
-  // Effects & UI toggles
   const menuBtn = document.getElementById("menu-btn");
   const effectSwitches = document.getElementById("effect-switches");
-
-  // Other
   const lightningContainer = document.getElementById("lightning-container");
   const flashOverlay = document.getElementById("flash-overlay");
-
-  // State
   let username = "";
   let messageCounter = 0;
   let repliedMessage = null; // { user, text } when replying
@@ -55,11 +37,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let startX = 0;
   let isRecording = false;
   let canceled = false;
-
-
-  /* ==========================
-     Music list (unchanged)
-     ========================== */
   const musicUrls = [
     "https://files.catbox.moe/x4wwty.mp4",
     "https://files.catbox.moe/dr6g3i.mp4",
@@ -104,10 +81,6 @@ document.addEventListener("DOMContentLoaded", () => {
     "https://files.catbox.moe/9nv0nw.mp3",
     "https://files.catbox.moe/exa8zj.mp3"
   ];
-
-  /* ==========================
-     Music helpers
-     ========================== */
   function playTrack(index) {
     if (currentAudio) currentAudio.pause();
     currentTrackIndex = index % musicUrls.length;
@@ -148,11 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   if (nextBtn) nextBtn.addEventListener("click", () => { currentTrackIndex = (currentTrackIndex + 1) % musicUrls.length; playTrack(currentTrackIndex); });
   if (prevBtn) prevBtn.addEventListener("click", () => { currentTrackIndex = (currentTrackIndex - 1 + musicUrls.length) % musicUrls.length; playTrack(currentTrackIndex); });
-
-  /* ==========================
-     Active users & UI helpers
-     ========================== */
-  socket.on("update users", (users) => {
+socket.on("update users", (users) => {
     if (window.innerWidth >= 600) {
       activeUsers = new Set(users);
       updatePCActiveUsersList();
@@ -180,23 +149,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     socket.emit("new user", username);
   };
-
-  /* ==========================
-     Append message (handles replies)
-     ========================== */
   function appendMessage(msgObj, type) {
     const li = document.createElement("li");
     li.classList.add(type);
-    //ADDING METADATA TO EVERY MESG
     li.dataset.user = msgObj.user;
     li.dataset.text = msgObj.text || "";
     li.dataset.id = msgObj.id || (messageCounter++).toString(); // unique ID
-
-
-    // If message has a replied preview
     let replyHtml = "";
     if (msgObj.replied) {
-      // trim long text for preview (one-line)
       let preview = String(msgObj.replied.text || "").trim();
       if (preview.length > 120) preview = preview.slice(0, 117) + "...";
       replyHtml = `<div class="replied-preview" style="background:#f8f8f8; border-left:4px solid #ff69b4; padding:6px 8px; margin-bottom:6px; font-size:0.88em; border-radius:4px;">
@@ -205,8 +165,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     li.innerHTML = `${replyHtml}<strong>${escapeHtml(msgObj.user)}:</strong> ${escapeHtml(msgObj.text)}`;
-
-    // Effects: glow & heart ripple
     const glowToggle = document.getElementById("toggle-glow");
     if (glowToggle && glowToggle.checked) {
       li.classList.add("glow");
@@ -219,12 +177,9 @@ document.addEventListener("DOMContentLoaded", () => {
       li.appendChild(heart);
       setTimeout(() => heart.remove(), 700);
     }
-
     messages.appendChild(li);
     messages.scrollTop = messages.scrollHeight;
   }
-
-  // safe HTML escape helper
   function escapeHtml(str) {
     if (!str && str !== 0) return "";
     return String(str)
@@ -234,39 +189,24 @@ document.addEventListener("DOMContentLoaded", () => {
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
   }
-
-  /* ==========================
-   Sending & receiving messages
-   ========================== */
-
-// SEND
 form.addEventListener("submit", (e) => {
   e.preventDefault();
   if (!input.value || !username) return;
 
   const text = input.value.trim();
-
-  // *** FIXED: include an id and ts when sending a chat message ***
   const msg = {
     user: username,
     text,
     id: (messageCounter++).toString(),
     ts: Date.now()
   };
-
-  // If replying to a message
   if (repliedMessage) {
-    // *** FIXED: include replied message id so delete can target it exactly ***
     msg.replied = {
       user: repliedMessage.user,
       text: repliedMessage.text,
       id: repliedMessage.id || null
     };
   }
-
-  /* =====================================
-        DELETE COMMAND ("dlt")
-    ===================================== */
   if (text === "dlt" && repliedMessage) {
     socket.emit("delete message", {
         targetUser: repliedMessage.user,
@@ -275,126 +215,80 @@ form.addEventListener("submit", (e) => {
         commandUser: username,
         commandText: "dlt"
     });
-
-
-    // Clear reply UI
     repliedMessage = null;
     if (replyBar) replyBar.style.display = "none";
-
-    // DO NOT append "dlt" locally
     input.value = "";
     return;
   }
-
-  // Normal message
   socket.emit("chat message", msg);
   appendMessage(msg, "sent");
-
-  // Reset UI
   repliedMessage = null;
   if (replyBar) replyBar.style.display = "none";
   input.value = "";
   socket.emit("stop typing", username);
 });
-
-// RECEIVE
 socket.on("chat message", (msg) => {
   if (msg.user !== username) {
     appendMessage(msg, "received");
   }
 });
-
-
-
-/* ==========================
-   Animate message delete (glowing dust)
-========================== */
 function animateDeleteMessage(li) {
   const rect = li.getBoundingClientRect();
-  const count = 50; // increased number of particles
+  const count = 50; 
   const centerX = rect.left + rect.width / 2;
   const centerY = rect.top + rect.height / 2;
 
   for (let i = 0; i < count; i++) {
     const particle = document.createElement("div");
     particle.classList.add("glow-particle");
-
-    // Random spread and velocity
     const angle = Math.random() * 2 * Math.PI;
     const radius = Math.random() * 80 + 20; // distance to fly
     const x = Math.cos(angle) * radius;
     const y = Math.sin(angle) * radius;
-
     particle.style.setProperty("--x", x + "px");
     particle.style.setProperty("--y", y + "px");
     particle.style.left = centerX + "px";
     particle.style.top = centerY + "px";
     particle.style.animationDuration = (Math.random() * 0.8 + 0.6) + "s"; // vary speed
-
     document.body.appendChild(particle);
-
-    // remove after animation
     setTimeout(() => particle.remove(), 1200);
   }
-
-  // fade out and shrink the message bubble
   li.style.transition = "opacity 0.6s, transform 0.6s";
   li.style.opacity = 0;
   li.style.transform = "scale(0.3) rotate(" + (Math.random()*30-15) + "deg)";
   setTimeout(() => li.remove(), 600);
 }
-
-/* =====================================
-   Handle delete command with animation
-   ===================================== */
 socket.on("delete message", (data) => {
   const items = document.querySelectorAll("#messages li");
 
   items.forEach(li => {
     const u = li.getAttribute("data-user");
     const t = li.getAttribute("data-text");
-    const id = li.getAttribute("data-id"); // *** FIXED: read id from element ***
-
-    // Animate the target replied message (match by id first, fallback to user+text)
+    const id = li.getAttribute("data-id"); 
     if (
       id === data.targetId ||
       (u === data.targetUser && t === data.targetText)
     ) {
       animateDeleteMessage(li);
     }
-
-    // Animate the "dlt" command message itself
     if (u === data.commandUser && t === data.commandText) {
       animateDeleteMessage(li);
     }
   });
 });
-
-
-
-
-  /* ==========================
-   Voice recording (fixed)
-   ========================== */
-
 function startRecordingIndicator() {
-  // Optional: show recording UI
   console.log("Recording started...");
 }
 
 function stopRecordingIndicator() {
-  // Optional: hide recording UI
   console.log("Recording stopped...");
 }
-
 async function ensureMediaStream() {
   if (!mediaStream) {
     mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   }
   return mediaStream;
 }
-
-// Helper function to append a voice message to the chat
 function appendVoiceMessage(msg) {
   const li = document.createElement("li");
   li.classList.add(msg.user === username ? "sent" : "received");
@@ -451,14 +345,12 @@ async function handleStart(e) {
           ts: Date.now()
         };
         socket.emit("voice message", voiceMsg);
-        appendVoiceMessage(voiceMsg); // append locally for sender
+        appendVoiceMessage(voiceMsg); 
       };
       reader.readAsDataURL(blob);
     }
 
     socket.emit("stop recording", username);
-
-    // Reset UI
     recordBtn.textContent = "🎤";
     isRecording = false;
     canceled = false;
@@ -495,7 +387,7 @@ function handleEnd() {
 
   if (mediaRecorder && mediaRecorder.state === "recording") {
     mediaRecorder.canceled = canceled;
-    mediaRecorder.stop(); // triggers onstop
+    mediaRecorder.stop(); 
   } else {
     stopRecordingIndicator();
     recordBtn.textContent = "🎤";
@@ -503,54 +395,35 @@ function handleEnd() {
     canceled = false;
   }
 }
-
-// Desktop
 recordBtn.addEventListener("mousedown", handleStart);
 window.addEventListener("mousemove", handleMove);
 window.addEventListener("mouseup", handleEnd);
-
-// Mobile
 recordBtn.addEventListener("touchstart", handleStart, { passive: false });
 recordBtn.addEventListener("touchmove", handleMove, { passive: false });
 recordBtn.addEventListener("touchend", handleEnd, { passive: false });
-
-// Receiving voice messages from other users
 socket.on("voice message", (msg) => {
   if (msg.user !== username) {
     appendVoiceMessage(msg);
   }
 });
-
-
-
-  /* ==========================
-     Falling flowers & trail particles
-     ========================== */
   function createFlower() {
     const wrapper = document.createElement("div");
     wrapper.classList.add("flower-wrapper");
-
     const flower = document.createElement("div");
     flower.classList.add("flower");
     flower.innerText = "🌸";
-
     wrapper.style.left = Math.random() * 100 + "vw";
     flower.style.fontSize = (20 + Math.random() * 15) + "px";
-
     const fallDuration = 4 + Math.random() * 3;
     const swayDuration = 2 + Math.random() * 2;
     const rotateDuration = 3 + Math.random() * 4;
-
     wrapper.style.animationDuration = `${fallDuration}s`;
     flower.style.animationDuration = `${swayDuration}s, ${rotateDuration}s`;
-
     wrapper.appendChild(flower);
     document.body.appendChild(wrapper);
-
     const maxDuration = Math.max(fallDuration, swayDuration, rotateDuration);
     setTimeout(() => wrapper.remove(), maxDuration * 1000);
   }
-
   const toggleFlowers = document.getElementById("toggle-flowers");
   if (toggleFlowers) {
     toggleFlowers.addEventListener("change", (e) => {
@@ -561,8 +434,6 @@ socket.on("voice message", (msg) => {
       }
     });
   }
-
-  // trail particles
   function createTrail(x, y) {
     const trail = document.createElement("div");
     trail.classList.add("trail-particle");
@@ -575,13 +446,8 @@ socket.on("voice message", (msg) => {
     if (e.buttons) createTrail(e.clientX, e.clientY);
   });
   document.addEventListener("touchmove", (e) => {
-    // do not prevent default globally; only prevented when swipe triggers
     for (let t of e.touches) createTrail(t.clientX, t.clientY);
   }, { passive: true });
-
-  /* ==========================
-     Lightning flash (guarded)
-     ========================== */
   function strikeLightning() {
     const toggleLightning = document.getElementById("toggle-lightning");
     if (!toggleLightning || !toggleLightning.checked) return;
@@ -590,47 +456,29 @@ socket.on("voice message", (msg) => {
     setTimeout(() => flashOverlay.style.opacity = 0, 200);
   }
   setInterval(strikeLightning, 5000 + Math.random() * 3000);
-
-  /* ==========================
-     Notifications (join/leave)
-     ========================== */
-
      let previousUsers = [];
 
 socket.on("update users", (userList) => {
   if (window.innerWidth >= 600) {
-    // Desktop: just update the active users list
     updatePCActiveUsersList(userList);
   } else {
-    // Mobile: detect who joined or left
     const joinedUsers = userList.filter((u) => !previousUsers.includes(u));
     const leftUsers = previousUsers.filter((u) => !userList.includes(u));
-
     joinedUsers.forEach((user) => showMobileNotification(user, "joined"));
     leftUsers.forEach((user) => showMobileNotification(user, "left"));
   }
-
   previousUsers = userList;
 });
-
 function showMobileNotification(uname, action) {
   console.log("MOBILE NOTIFICATION TRIGGERED:", uname, action);
-
   const container = document.getElementById("mobile-user-notifications");
   if (!container) return;
-
   const el = document.createElement("div");
   el.classList.add("mobile-notification");
   el.textContent = `${uname} ${action}`;
-
   container.appendChild(el);
-
   setTimeout(() => el.remove(), 3000);
 }
-
- /* ==========================
-   Typing & Recording indicators
-========================== */
 input.addEventListener("input", () => {
   if (!isTyping) socket.emit("typing", username);
   isTyping = true;
@@ -640,8 +488,6 @@ input.addEventListener("input", () => {
     isTyping = false;
   }, 1000);
 });
-
-// OTHER USERS
 socket.on("typing", user => {
   if (user !== username) {
     usersTyping.add(user);
@@ -666,8 +512,6 @@ socket.on("stop recording", user => {
     updateIndicator();
   }
 });
-
-
 function updateIndicator() {
   if (recordingUsers.size > 0) {
     typingIndicator.textContent = [...recordingUsers].join(", ") + " is recording...";
@@ -677,10 +521,6 @@ function updateIndicator() {
     typingIndicator.textContent = "";
   }
 }
-
-  /* ==========================
-     Background slideshow (unchanged)
-     ========================== */
   const bgImages = [
     "https://files.catbox.moe/jzvuld.jpg",
     "https://files.catbox.moe/huovh5.jpg",
@@ -708,9 +548,6 @@ function updateIndicator() {
   }
   setInterval(changeBackground, 25000);
 
-  /* ==========================
-     Menu toggle
-     ========================== */
   if (menuBtn && effectSwitches) {
     menuBtn.addEventListener("click", () => {
       effectSwitches.classList.toggle("show");
@@ -722,48 +559,34 @@ function updateIndicator() {
     });
   }
 
-  /* ==========================
-     Swipe / Drag to reply (works for mobile, desktop, and click)
-     - triggers the WhatsApp-style reply bar above input
-     ========================== */
-  (function setupReplyTriggers() {
+  function setupReplyTriggers() {
     const container = messages;
     if (!container) return;
-
     let startX = 0;
     let startY = 0;
     const swipeThreshold = 80;
     let isMouseDown = false;
-
-    // helper to extract clean text and user from li
     function extractFromLi(li) {
       const strong = li.querySelector("strong");
       const user = strong ? (strong.textContent.replace(/:$/, "").trim()) : "";
-      // get message text by removing strong text from innerText (safe fallback)
       let full = li.innerText || "";
       if (strong) {
         const strongText = strong.textContent;
-        // remove only the first occurrence of strongText
         full = full.replace(new RegExp("^" + escapeRegExp(strongText)), "").trim();
       }
       return { user, text: full };
     }
 
     function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-
-    // main trigger that uses our triggerReply function (defined below)
     function handleTrigger(targetLi) {
       if (!targetLi) return;
       triggerReply(targetLi);
     }
-
-    // touch events
     container.addEventListener("touchstart", (e) => {
       const touch = e.touches[0];
       startX = touch.clientX;
       startY = touch.clientY;
     }, { passive: true });
-
     container.addEventListener("touchmove", (e) => {
       const touch = e.touches[0];
       const deltaX = touch.clientX - startX;
@@ -772,15 +595,12 @@ function updateIndicator() {
       if (deltaX > swipeThreshold) {
         const target = e.target.closest("li");
         if (target) {
-          // prevent scrolling only when we actually trigger reply
           e.preventDefault();
           handleTrigger(target);
           startX = touch.clientX;
         }
       }
     }, { passive: false });
-
-    // mouse events for desktop drag
     container.addEventListener("mousedown", (e) => { isMouseDown = true; startX = e.clientX; startY = e.clientY; });
     container.addEventListener("mousemove", (e) => {
       if (!isMouseDown) return;
@@ -797,67 +617,39 @@ function updateIndicator() {
     });
     container.addEventListener("mouseup", () => { isMouseDown = false; });
     container.addEventListener("mouseleave", () => { isMouseDown = false; });
-
-    // simple click/tap to reply as well (optional, like WhatsApp long-press)
     container.addEventListener("click", (e) => {
       const target = e.target.closest("li");
-      // if user tapped a sent/received bubble quickly, open the reply bar (makes UX easier)
       if (target) {
-        // small delay to differentiate from drag/swipe
         setTimeout(() => {
-          // require the user to hold ctrl/cmd for click-reply on desktop? No — we'll allow simple click.
-          // If you prefer to require modifier, check e.ctrlKey / e.metaKey here.
           triggerReply(target);
         }, 100);
       }
     });
-
-    // actual logic that fills reply UI
     function triggerReply(messageEl) {
       if (!messageEl || !username) {
-        // if user hasn't joined, show a brief hint
         if (!username) {
-          // small toast style mobile notification
           showMobileNotification("Please join chat first", "");
         }
         return;
       }
-
       const strong = messageEl.querySelector("strong");
       if (!strong) return;
-
       const user = strong.textContent.replace(/:$/, "").trim();
-      // compute message text content (remove strong content)
       let full = messageEl.innerText || "";
       full = full.replace(new RegExp("^" + escapeRegExp(strong.textContent)), "").trim();
-
-      // save replied message object
       repliedMessage = {
     user,
     text: full,
     id: messageEl.dataset.id   // ADD THIS
 };
-
-      // show reply bar
       if (repliedMessageText) repliedMessageText.textContent = `${user}: ${full}`;
       if (replyBar) replyBar.style.display = "flex";
-
-      // highlight
       messageEl.classList.add("replying");
       setTimeout(() => messageEl.classList.remove("replying"), 400);
-
-      // focus input
       input.focus();
     }
-
-    // expose triggerReply to outer scope (used elsewhere earlier)
     window.triggerReply = (el) => triggerReply(el);
-
   })();
-
-  /* ==========================
-     Reply cancel button
-     ========================== */
   if (cancelReplyBtn) {
     cancelReplyBtn.addEventListener("click", () => {
       repliedMessage = null;
@@ -865,12 +657,7 @@ function updateIndicator() {
       input.value = "";
     });
   }
-
-  /* ==========================
-     Utility helpers
-     ========================== */
   function showMobileNotification(usernameText, action) {
-    // reusing earlier function behavior
     if (!usernameText) return;
     let container = document.getElementById("mobile-user-notifications");
     if (!container) {
@@ -890,8 +677,4 @@ function updateIndicator() {
     container.appendChild(el);
     setTimeout(() => el.remove(), 2000);
   }
-  /* ==========================
-     Finish DOMContentLoaded
-     ========================== */
-
-}); // end DOMContentLoaded
+}); 
